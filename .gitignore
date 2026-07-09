@@ -50,3 +50,4 @@ service/openaicompat/chat_responses_live_local_test.go
 new-api-linux-amd64
 new-api-image.tar.gz
 tmp/
+VERSION
