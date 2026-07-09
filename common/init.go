@@ -31,6 +31,13 @@ func printHelp() {
 func InitEnv() {
 	flag.Parse()
 
+	// Try reading VERSION file from project root
+	if data, err := os.ReadFile("VERSION"); err == nil {
+		if v := strings.TrimSpace(string(data)); v != "" {
+			Version = v
+		}
+	}
+
 	envVersion := os.Getenv("VERSION")
 	if envVersion != "" {
 		Version = envVersion

@@ -80,7 +80,7 @@ CONFIG    := config.yaml
 PID_FILE  := .new-api.pid
 LOG_FILE  := new-api.log
 
-.PHONY: build start stop restart status logs clean air \
+.PHONY: build start stop restart status logs clean air deploy \
         sync sync-main rebase pull push commit diff log branch
 
 build:
@@ -151,8 +151,14 @@ logs:
 	   echo ">>> No log file found"; \
 	fi
 
-## 热加载开发模式（需要 air: go install github.com/air-verse/air@latest）
-air:
+## 启动本地数据库（MySQL + Redis 容器，端口映射到 localhost）
+db:
+	@docker compose -f docker-compose.local.yml up -d
+	@echo ">>> MySQL: localhost:3306, Redis: localhost:6379"
+	@echo ">>> 停止: docker compose -f docker-compose.local.yml down"
+
+## 热加载开发模式（自动启动 MySQL + Redis，需要 air: go install github.com/air-verse/air@latest）
+air: db
 	@AIR=$$(go env GOPATH)/bin/air; \
 	if [ ! -f "$$AIR" ]; then \
 	   echo ">>> Installing air..."; \
@@ -256,6 +262,89 @@ branch:
 	echo ""; \
 	echo ">>> Ahead of upstream/main: $$(git rev-list --count upstream/main..HEAD 2>/dev/null || echo 'unknown') commits"; \
 	echo ">>> Behind upstream/main:   $$(git rev-list --count HEAD..upstream/main 2>/dev/null || echo 'unknown') commits"
+
+## 服务器本地构建部署（不推荐，4C4G 服务器可能 OOM）
+deploy:
+	@echo ">>> Building and deploying new-api (on server)..."
+	@docker compose build new-api
+	@docker compose up -d new-api
+	@echo ">>> Deploy complete. Check: docker compose ps"
+
+## 无缓存构建部署（不推荐，仅服务器资源充足时使用）
+deploy-fresh:
+	@echo ">>> Building new-api without cache..."
+	@docker compose build --no-cache new-api
+	@docker compose up -d new-api
+	@echo ">>> Deploy complete. Check: docker compose ps"
+
+## ─── 部署流程（本地 Mac 构建 → 远程服务器上线）(推荐)────────────────────
+##
+## 使用方式：
+##   make release SERVER=root@1.2.3.4        # 一键：构建+传输+上线
+##   make release SERVER=root@1.2.3.4 PATH=/opt/new-api
+##   make build-image                         # 仅构建镜像（不传输）
+##   make upload SERVER=root@1.2.3.4          # 仅传输+上线（已有镜像）
+##
+## 前提：服务器上已有 docker-compose.yml 和 .env（首次部署手动配置）
+## 服务器 docker-compose.yml 中 new-api 服务使用 image: new-api:latest
+
+SERVER ?= ubuntu@82.156.124.82
+REMOTE_PATH ?= /home/ubuntu/new-api
+IMAGE_FILE = new-api-image.tar.gz
+
+## 构建生产镜像（本地 Mac 交叉编译，~60s）
+## 用法：make build-image              — 自动递增 patch 版本
+##       make build-image version=1.0.0 — 指定版本号
+build-image:
+	@if [ -n "$(version)" ]; then \
+		echo "$(version)" > VERSION; \
+	else \
+		VERSION=$$(cat VERSION); \
+		MAJOR=$$(echo $$VERSION | cut -d. -f1); \
+		MINOR=$$(echo $$VERSION | cut -d. -f2); \
+		PATCH=$$(echo $$VERSION | cut -d. -f3); \
+		NEW_PATCH=$$((PATCH + 1)); \
+		echo "$$MAJOR.$$MINOR.$$NEW_PATCH" > VERSION; \
+	fi
+	@echo ">>> Version: $$(cat VERSION)"
+	@echo ">>> [1/4] Building frontend..."
+	@cd ./web && bun install --frozen-lockfile
+	@cd $(WEB_DIR) && DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION=$$(cat ../../VERSION) bun run build
+	@mkdir -p $(WEB_CLASSIC_DIR)/dist && \
+		[ -f $(WEB_CLASSIC_DIR)/dist/index.html ] || \
+		echo '<!DOCTYPE html><html><head><title>Classic</title></head><body></body></html>' > $(WEB_CLASSIC_DIR)/dist/index.html
+	@echo ">>> [2/4] Cross-compiling Go binary (linux/amd64)..."
+	@GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w" -o new-api-linux-amd64 .
+	@echo ">>> [3/4] Packaging Docker image..."
+	@VERSION=$$(cat VERSION); \
+	docker build --platform linux/amd64 \
+		--label "org.opencontainers.image.version=$$VERSION" \
+		-t new-api:latest -t new-api:$$VERSION \
+		-f Dockerfile.local .
+	@echo ">>> [4/4] Exporting image..."
+	@docker save new-api:latest | gzip > $(IMAGE_FILE)
+	@rm -f new-api-linux-amd64
+	@echo ">>> Done: $(IMAGE_FILE) ($$(du -h $(IMAGE_FILE) | cut -f1)) — v$$(cat VERSION)"
+
+## 传输镜像到服务器并重启服务
+upload:
+	@if [ -z "$(SERVER)" ]; then echo ">>> ERROR: 需要指定 SERVER=user@host"; exit 1; fi
+	@if [ ! -f $(IMAGE_FILE) ]; then echo ">>> ERROR: $(IMAGE_FILE) 不存在，先运行 make build-image"; exit 1; fi
+	@echo ">>> Uploading $(IMAGE_FILE) to $(SERVER):$(REMOTE_PATH)/"
+	@scp $(IMAGE_FILE) $(SERVER):$(REMOTE_PATH)/
+	@echo ">>> Loading image and restarting..."
+	@ssh $(SERVER) "cd $(REMOTE_PATH) && docker load -i $(IMAGE_FILE) && docker compose up -d new-api && rm -f $(IMAGE_FILE)"
+	@echo ">>> Deployed v$$(cat VERSION)! Verify: curl -s http://$$(echo $(SERVER) | cut -d@ -f2):3000/api/status | grep version"
+
+## 一键发布：构建 + 传输 + 上线
+release: build-image upload
+
+## 清理 Docker 构建缓存（保留最近 5GB）
+docker-clean:
+	@echo ">>> Pruning Docker build cache..."
+	@docker builder prune --keep-storage 5GB -f
+	@docker image prune -f
+	@echo ">>> Clean complete"
 
 clean:
 	@rm -f $(BINARY) $(PID_FILE) $(LOG_FILE)

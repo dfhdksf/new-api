@@ -9,10 +9,14 @@ build
 *.db-journal
 logs
 web/default/dist
+!web/default/dist/index.html
 web/classic/dist
+!web/classic/dist/index.html
 web/node_modules
 web/dist
 .env
+.env.local
+docker-compose.local.yml
 one-api
 new-api
 /__debug_bin*
@@ -41,3 +45,8 @@ skills-lock.json
 .local-tests/
 service/relayconvert/chat_responses_live_local_test.go
 service/openaicompat/chat_responses_live_local_test.go
+
+# Build artifacts
+new-api-linux-amd64
+new-api-image.tar.gz
+tmp/
