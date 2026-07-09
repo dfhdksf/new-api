@@ -55,7 +55,7 @@ import { useUpdateOption } from '../hooks/use-update-option'
 
 const _systemInfoSchema = z.object({
   theme: z.object({
-    frontend: z.enum(['default', 'classic']),
+    frontend: z.enum(['default']),
   }),
   SystemName: z.string().min(1),
   ServerAddress: z.string().optional(),
@@ -85,10 +85,7 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
   const updateOption = useUpdateOption()
 
   const normalizedDefaults: SystemInfoFormValues = {
-    theme: {
-      frontend:
-        defaultValues.theme?.frontend === 'classic' ? 'classic' : 'default',
-    },
+    theme: {frontend: 'default'},
     SystemName: normalizeValue(defaultValues.SystemName),
     ServerAddress: normalizeValue(defaultValues.ServerAddress),
     Logo: normalizeValue(defaultValues.Logo),
@@ -103,7 +100,7 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
 
   const systemInfoSchemaWithI18n = z.object({
     theme: z.object({
-      frontend: z.enum(['default', 'classic']),
+      frontend: z.enum(['default']),
     }),
     SystemName: z.string().min(1, {
       error: () => t('System name is required'),
@@ -201,10 +198,6 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
                           value: 'default',
                           label: t('Default (New Frontend)'),
                         },
-                        {
-                          value: 'classic',
-                          label: t('Classic (Legacy Frontend)'),
-                        },
                       ]}
                       onValueChange={field.onChange}
                       value={field.value}
@@ -219,16 +212,11 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
                           <SelectItem value='default'>
                             {t('Default (New Frontend)')}
                           </SelectItem>
-                          <SelectItem value='classic'>
-                            {t('Classic (Legacy Frontend)')}
-                          </SelectItem>
                         </SelectGroup>
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      {t(
-                        'Switch between the new frontend and the classic frontend. Changes take effect after page reload.'
-                      )}
+                      {t('Frontend theme selection.')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

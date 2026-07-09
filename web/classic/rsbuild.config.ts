@@ -47,7 +47,6 @@ export default defineConfig(({ envMode }) => {
           semiUiDir,
           'dist/css/semi.css',
         ),
-        'date-fns': path.resolve(semiUiDir, 'node_modules/date-fns'),
       },
     },
     html: {
@@ -73,6 +72,11 @@ export default defineConfig(({ envMode }) => {
     },
     tools: {
       rspack: {
+        resolve: {
+          alias: {
+            'date-fns': path.resolve(semiUiDir, 'node_modules/date-fns'),
+          },
+        },
         module: {
           rules: [
             {

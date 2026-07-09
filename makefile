@@ -310,7 +310,6 @@ build-image:
 	@echo ">>> [1/4] Building frontend..."
 	@cd ./web && bun install --frozen-lockfile
 	@cd $(WEB_DIR) && DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION=$$(cat ../../VERSION) bun run build
-	@cd $(WEB_CLASSIC_DIR) && VITE_REACT_APP_VERSION=$$(cat ../../VERSION) bun run build
 	@echo ">>> [2/4] Cross-compiling Go binary (linux/amd64)..."
 	@GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w" -o new-api-linux-amd64 .
 	@echo ">>> [3/4] Packaging Docker image..."
