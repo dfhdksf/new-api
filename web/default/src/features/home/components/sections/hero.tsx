@@ -48,11 +48,10 @@ const MoreIcon = () => (
 export function Hero(props: HeroProps) {
   const { t } = useTranslation()
   const { status } = useStatus()
-  const docsUrl =
-    (status?.docs_link as string | undefined) || 'https://docs.newapi.pro'
+  const docsUrl = (status?.docs_link as string | undefined) || '/guide.html'
 
   const renderDocsButton = () => {
-    const isExternal = docsUrl.startsWith('http')
+    const isExternal = /^https?:\/\//i.test(docsUrl)
     if (isExternal) {
       return (
         <Button
@@ -71,7 +70,7 @@ export function Hero(props: HeroProps) {
       <Button
         variant='outline'
         className='group border-border/50 hover:border-border hover:bg-muted/50 inline-flex h-11 items-center gap-1.5 rounded-lg px-5 text-sm font-medium'
-        render={<Link to={docsUrl} />}
+        render={<a href={docsUrl} />}
       >
         <BookOpen className='text-muted-foreground/80 group-hover:text-foreground size-4 transition-colors duration-200' />
         <span>{t('Docs')}</span>

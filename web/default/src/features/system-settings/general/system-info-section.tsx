@@ -85,7 +85,7 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
   const updateOption = useUpdateOption()
 
   const normalizedDefaults: SystemInfoFormValues = {
-    theme: {frontend: 'default'},
+    theme: { frontend: 'default' },
     SystemName: normalizeValue(defaultValues.SystemName),
     ServerAddress: normalizeValue(defaultValues.ServerAddress),
     Logo: normalizeValue(defaultValues.Logo),

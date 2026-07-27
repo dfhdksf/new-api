@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>文档中心</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-muted: #f1f5f9;
+        --text: #0f172a;
+        --muted: #64748b;
+        --border: #e2e8f0;
+        --accent: #2563eb;
+        --accent-soft: #dbeafe;
+        --code-bg: #0f172a;
+        --code-text: #e2e8f0;
+        --shadow: 0 24px 60px rgb(15 23 42 / 10%);
+        --sidebar-width: 248px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --bg: #020617;
+          --surface: #0f172a;
+          --surface-muted: #1e293b;
+          --text: #e2e8f0;
+          --muted: #94a3b8;
+          --border: #334155;
+          --accent: #60a5fa;
+          --accent-soft: rgb(37 99 235 / 18%);
+          --code-bg: #020617;
+          --code-text: #e2e8f0;
+          --shadow: 0 24px 60px rgb(0 0 0 / 35%);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(
+            circle at top left,
+            var(--accent-soft),
+            transparent 34rem
+          ),
+          var(--bg);
+        color: var(--text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        line-height: 1.75;
+        padding-left: var(--sidebar-width);
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .page-shell {
+        width: min(100% - 3rem, 980px);
+        margin: 0 auto;
+        padding: 52px 0 80px;
+      }
+
+      .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 100;
+        display: flex;
+        width: var(--sidebar-width);
+        flex-direction: column;
+        overflow-y: auto;
+        border-right: 1px solid var(--border);
+        background: color-mix(in srgb, var(--surface) 97%, var(--bg));
+        padding: 20px 12px;
+      }
+
+      .sidebar-brand {
+        margin-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+        padding: 4px 8px 16px;
+      }
+
+      .sidebar-brand a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+      }
+
+      .sidebar-brand a:hover {
+        text-decoration: none;
+        opacity: 0.82;
+      }
+
+      .sidebar-logo,
+      .hero-logo {
+        flex: 0 0 auto;
+        border: 1px solid var(--border);
+        background: var(--surface-muted);
+        object-fit: contain;
+      }
+
+      .sidebar-logo {
+        width: 38px;
+        height: 38px;
+        border-radius: 11px;
+      }
+
+      .sidebar-brand-copy {
+        min-width: 0;
+      }
+
+      .sidebar-brand-copy strong,
+      .sidebar-brand-copy span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .sidebar-brand-copy strong {
+        font-size: 15px;
+        line-height: 1.35;
+      }
+
+      .sidebar-brand-copy span {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .sidebar-brand-copy #sidebar-domain {
+        display: inline;
+      }
+
+      .sidebar-back {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 10px;
+        border-radius: 9px;
+        padding: 8px 10px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 550;
+      }
+
+      .sidebar-back:hover {
+        background: var(--surface-muted);
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      .sidebar-back svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      .toc-title {
+        margin: 0;
+        padding: 7px 10px 5px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .toc-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .toc-link {
+        display: block;
+        border-radius: 9px;
+        padding: 7px 10px;
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.45;
+        transition:
+          color 150ms ease,
+          background-color 150ms ease;
+      }
+
+      .toc-link:hover {
+        background: var(--surface-muted);
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      .toc-link.is-active {
+        background: var(--text);
+        color: var(--surface);
+        font-weight: 650;
+      }
+
+      .toc-level-1 {
+        font-weight: 650;
+      }
+
+      .toc-level-2 {
+        padding-left: 18px;
+      }
+
+
+
+      .toc-empty {
+        padding: 7px 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .sidebar-toggle,
+      .sidebar-overlay {
+        display: none;
+      }
+
+      .sidebar-toggle {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 210;
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        color: var(--text);
+        font-size: 20px;
+        box-shadow: 0 8px 24px rgb(15 23 42 / 12%);
+      }
+
+      .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 90;
+        background: rgb(2 6 23 / 48%);
+        backdrop-filter: blur(2px);
+      }
+
+      .doc-card {
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        background: color-mix(in srgb, var(--surface) 94%, transparent);
+        box-shadow: var(--shadow);
+      }
+
+      .doc-hero {
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(
+          135deg,
+          var(--accent-soft),
+          transparent 65%
+        );
+        padding: clamp(28px, 6vw, 56px);
+      }
+
+      .hero-brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .hero-logo {
+        width: 52px;
+        height: 52px;
+        border-radius: 15px;
+      }
+
+      .eyebrow {
+        margin: 0 0 5px;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .doc-hero h1 {
+        margin: 0;
+        max-width: 760px;
+        font-size: clamp(32px, 7vw, 58px);
+        line-height: 1.05;
+        letter-spacing: -0.06em;
+      }
+
+      .doc-hero p {
+        margin: 14px 0 0;
+        max-width: 680px;
+        color: var(--muted);
+        font-size: clamp(15px, 2.2vw, 18px);
+      }
+
+      .site-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 18px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface-muted);
+        padding: 6px 14px;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .site-badge:hover {
+        background: var(--accent-soft);
+        text-decoration: none;
+      }
+
+      .site-badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        box-shadow: 0 0 0 3px rgb(16 185 129 / 14%);
+      }
+
+      #content {
+        padding: clamp(28px, 6vw, 56px);
+      }
+
+      .loading,
+      .error {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--surface-muted);
+        color: var(--muted);
+        padding: 18px 20px;
+      }
+
+      .error strong {
+        color: var(--text);
+      }
+
+      .markdown-body > :first-child {
+        margin-top: 0;
+      }
+
+      .markdown-body > :last-child {
+        margin-bottom: 0;
+      }
+
+      .markdown-body h1,
+      .markdown-body h2,
+      .markdown-body h3,
+      .markdown-body h4 {
+        scroll-margin-top: 24px;
+        margin: 2em 0 0.75em;
+        line-height: 1.25;
+        letter-spacing: -0.035em;
+      }
+
+      .markdown-body h1 {
+        font-size: 2.2rem;
+      }
+
+      .markdown-body h2 {
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.4em;
+        font-size: 1.75rem;
+      }
+
+      .markdown-body h3 {
+        font-size: 1.35rem;
+      }
+
+      .markdown-body p,
+      .markdown-body ul,
+      .markdown-body ol,
+      .markdown-body blockquote,
+      .markdown-body pre,
+      .markdown-body table {
+        margin: 1em 0;
+      }
+
+      .markdown-body ul,
+      .markdown-body ol {
+        padding-left: 1.5em;
+      }
+
+      .markdown-body li + li {
+        margin-top: 0.35em;
+      }
+
+      .markdown-body blockquote {
+        border-left: 4px solid var(--accent);
+        border-radius: 0 12px 12px 0;
+        background: var(--surface-muted);
+        color: var(--muted);
+        padding: 0.75em 1em;
+      }
+
+      .markdown-body code {
+        border-radius: 6px;
+        background: var(--surface-muted);
+        padding: 0.15em 0.35em;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+        font-size: 0.9em;
+      }
+
+      .markdown-body pre {
+        overflow-x: auto;
+        border-radius: 16px;
+        background: var(--code-bg);
+        color: var(--code-text);
+        padding: 18px 20px;
+      }
+
+      .markdown-body pre code {
+        background: transparent;
+        color: inherit;
+        padding: 0;
+      }
+
+      .markdown-body img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        margin: 1.25em auto;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        box-shadow: 0 14px 32px rgb(15 23 42 / 10%);
+      }
+
+      .markdown-body table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        border-collapse: collapse;
+      }
+
+      .markdown-body th,
+      .markdown-body td {
+        border: 1px solid var(--border);
+        padding: 10px 12px;
+        text-align: left;
+      }
+
+      .markdown-body th {
+        background: var(--surface-muted);
+      }
+
+      .markdown-body a {
+        font-weight: 550;
+        text-decoration: underline;
+        text-decoration-color: color-mix(
+          in srgb,
+          var(--accent) 38%,
+          transparent
+        );
+        text-underline-offset: 3px;
+      }
+
+      .markdown-body a[target='_blank']::after {
+        content: ' ↗';
+        font-size: 0.78em;
+      }
+
+      .markdown-body hr {
+        border: 0;
+        border-top: 1px solid var(--border);
+        margin: 2em 0;
+      }
+
+      @media (max-width: 900px) {
+        body {
+          padding-left: 0;
+        }
+
+        .page-shell {
+          width: min(100% - 1rem, 820px);
+          padding: 68px 0 56px;
+        }
+
+        .sidebar {
+          width: min(82vw, var(--sidebar-width));
+          transform: translateX(-100%);
+          transition: transform 240ms ease;
+        }
+
+        .sidebar.is-open {
+          transform: translateX(0);
+        }
+
+        .sidebar-toggle {
+          display: grid;
+          place-items: center;
+        }
+
+        .sidebar-overlay.is-open {
+          display: block;
+        }
+
+        .doc-card {
+          border-radius: 20px;
+        }
+
+        .doc-hero,
+        #content {
+          padding: 28px 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="sidebar" id="sidebar" aria-label="文档导航">
+      <div class="sidebar-brand">
+        <a id="sidebar-home" href="/">
+          <img
+            id="sidebar-logo"
+            class="sidebar-logo"
+            src="/logo.png"
+            alt="站点 Logo"
+          />
+          <span class="sidebar-brand-copy">
+            <strong id="sidebar-name">文档中心</strong>
+            <span>AI API 中转站 · <span id="sidebar-domain">本站</span></span>
+          </span>
+        </a>
+      </div>
+
+      <a id="sidebar-back" class="sidebar-back" href="/">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path d="M19 12H5m7-7-7 7 7 7" />
+        </svg>
+        返回主站
+      </a>
+
+      <h2 class="toc-title">目录</h2>
+      <nav id="toc-nav" class="toc-nav">
+        <span class="toc-empty">正在加载目录…</span>
+      </nav>
+    </nav>
+
+    <button
+      id="sidebar-toggle"
+      class="sidebar-toggle"
+      type="button"
+      aria-label="打开文档目录"
+      aria-expanded="false"
+    >
+      ☰
+    </button>
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <main class="page-shell">
+      <article class="doc-card">
+        <header class="doc-hero">
+          <div class="hero-brand">
+            <img
+              id="hero-logo"
+              class="hero-logo"
+              src="/logo.png"
+              alt="站点 Logo"
+            />
+            <div>
+              <p class="eyebrow">Documentation</p>
+              <h1 id="page-title">使用文档</h1>
+            </div>
+          </div>
+          <p>欢迎加入我们的大家庭,如果仍有问题,欢迎到交流群:817916072探讨交流</p>
+          <a
+            id="site-badge"
+            class="site-badge"
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span class="site-badge-dot" aria-hidden="true"></span>
+            <span>中转站点：<span id="hero-domain">本站</span></span>
+          </a>
+        </header>
+        <section id="content" class="markdown-body">
+          <div class="loading">正在加载文档内容…</div>
+        </section>
+      </article>
+    </main>
+
+    <script>
+      const markdownUrl = '/docs/guide.md'
+      const markdownBase = '/docs/'
+      const content = document.getElementById('content')
+      const tocNav = document.getElementById('toc-nav')
+      const sidebar = document.getElementById('sidebar')
+      const sidebarToggle = document.getElementById('sidebar-toggle')
+      const sidebarOverlay = document.getElementById('sidebar-overlay')
+      const sidebarHome = document.getElementById('sidebar-home')
+      const sidebarBack = document.getElementById('sidebar-back')
+      const sidebarLogo = document.getElementById('sidebar-logo')
+      const sidebarName = document.getElementById('sidebar-name')
+      const sidebarDomain = document.getElementById('sidebar-domain')
+      const heroLogo = document.getElementById('hero-logo')
+      const pageTitle = document.getElementById('page-title')
+      const siteBadge = document.getElementById('site-badge')
+      const heroDomain = document.getElementById('hero-domain')
+      let tocHeadings = []
+      let tocLinks = []
+
+      function escapeHtml(value) {
+        return value
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#039;')
+      }
+
+      function resolveAssetUrl(url) {
+        if (/^(?:[a-z][a-z0-9+.-]*:|\/|#)/i.test(url)) {
+          return url
+        }
+        return markdownBase + url.replace(/^\.\//, '')
+      }
+
+      function renderInline(value) {
+        const tokens = []
+        const preserve = (html) => {
+          const token = `\uE000${tokens.length}\uE001`
+          tokens.push(html)
+          return token
+        }
+        const restore = (html) =>
+          html.replace(
+            /\uE000(\d+)\uE001/g,
+            (_, index) => tokens[Number(index)]
+          )
+
+        const unescaped = value.replace(/\\([\\`*_[\]{}()#+.!-])/g, '$1')
+        let html = escapeHtml(unescaped)
+
+        html = html.replace(/`([^`]+)`/g, (_, code) =>
+          preserve(`<code>${code}</code>`)
+        )
+        html = html.replace(
+          /!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;[^&]*&quot;)?\)/g,
+          (_, alt, src) =>
+            preserve(
+              `<img src="${escapeHtml(resolveAssetUrl(src))}" alt="${alt}" loading="lazy">`
+            )
+        )
+        html = html.replace(
+          /\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;[^&]*&quot;)?\)/g,
+          (_, text, href) => {
+            const url = resolveAssetUrl(href)
+            const attrs = /^(?:https?:)?\/\//i.test(url)
+              ? ' target="_blank" rel="noopener noreferrer"'
+              : ''
+            return preserve(`<a href="${escapeHtml(url)}"${attrs}>${text}</a>`)
+          }
+        )
+        html = html.replace(/https?:\/\/[^\s<>"']+/gi, (rawURL) => {
+          let url = rawURL
+          let suffix = ''
+          while (/[)*,.;!?，。；！？]$/.test(url)) {
+            suffix = url.slice(-1) + suffix
+            url = url.slice(0, -1)
+          }
+          return (
+            preserve(
+              `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+            ) + suffix
+          )
+        })
+        html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>')
+        html = html.replace(/(^|\W)\*([^*]+)\*(?=\W|$)/g, '$1<em>$2</em>')
+        html = html.replace(/(^|\W)_([^_]+)_(?=\W|$)/g, '$1<em>$2</em>')
+        return restore(html)
+      }
+
+      function renderTable(lines, startIndex) {
+        const rows = []
+        let index = startIndex
+        while (index < lines.length && /^\s*\|.*\|\s*$/.test(lines[index])) {
+          rows.push(lines[index].trim())
+          index += 1
+        }
+
+        if (
+          rows.length < 2 ||
+          !/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(rows[1])
+        ) {
+          return null
+        }
+
+        const cells = (row) =>
+          row
+            .replace(/^\||\|$/g, '')
+            .split('|')
+            .map((cell) => renderInline(cell.trim()))
+        const header = cells(rows[0])
+          .map((cell) => `<th>${cell}</th>`)
+          .join('')
+        const body = rows
+          .slice(2)
+          .map(
+            (row) =>
+              `<tr>${cells(row)
+                .map((cell) => `<td>${cell}</td>`)
+                .join('')}</tr>`
+          )
+          .join('')
+        return {
+          html: `<table><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table>`,
+          nextIndex: index,
+        }
+      }
+
+      function parseMarkdown(markdown) {
+        const lines = markdown.replace(/\r\n?/g, '\n').split('\n')
+        const output = []
+        let index = 0
+        let paragraph = []
+        let list = null
+        let blockquote = []
+
+        function flushParagraph() {
+          if (!paragraph.length) return
+          output.push(`<p>${renderInline(paragraph.join(' '))}</p>`)
+          paragraph = []
+        }
+
+        function flushList() {
+          if (!list) return
+          output.push(
+            `<${list.type}>${list.items.map((item) => `<li>${renderInline(item)}</li>`).join('')}</${list.type}>`
+          )
+          list = null
+        }
+
+        function flushBlockquote() {
+          if (!blockquote.length) return
+          output.push(
+            `<blockquote>${blockquote.map((line) => `<p>${renderInline(line)}</p>`).join('')}</blockquote>`
+          )
+          blockquote = []
+        }
+
+        while (index < lines.length) {
+          const line = lines[index]
+          const trimmed = line.trim()
+
+          if (!trimmed) {
+            flushParagraph()
+            flushList()
+            flushBlockquote()
+            index += 1
+            continue
+          }
+
+          if (trimmed.startsWith('```')) {
+            flushParagraph()
+            flushList()
+            flushBlockquote()
+            const code = []
+            index += 1
+            while (
+              index < lines.length &&
+              !lines[index].trim().startsWith('```')
+            ) {
+              code.push(lines[index])
+              index += 1
+            }
+            output.push(
+              `<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`
+            )
+            index += 1
+            continue
+          }
+
+          const table = renderTable(lines, index)
+          if (table) {
+            flushParagraph()
+            flushList()
+            flushBlockquote()
+            output.push(table.html)
+            index = table.nextIndex
+            continue
+          }
+
+          const heading = /^(#{1,4})\s+(.+)$/.exec(trimmed)
+          if (heading) {
+            flushParagraph()
+            flushList()
+            flushBlockquote()
+            output.push(
+              `<h${heading[1].length}>${renderInline(heading[2])}</h${heading[1].length}>`
+            )
+            index += 1
+            continue
+          }
+
+          if (/^(-{3,}|\*{3,})$/.test(trimmed)) {
+            flushParagraph()
+            flushList()
+            flushBlockquote()
+            output.push('<hr>')
+            index += 1
+            continue
+          }
+
+          const quote = /^>\s?(.*)$/.exec(trimmed)
+          if (quote) {
+            flushParagraph()
+            flushList()
+            blockquote.push(quote[1])
+            index += 1
+            continue
+          }
+
+          const unordered = /^[-*+]\s+(.+)$/.exec(trimmed)
+          const ordered = /^\d+[.)]\s+(.+)$/.exec(trimmed)
+          if (unordered || ordered) {
+            flushParagraph()
+            flushBlockquote()
+            const type = unordered ? 'ul' : 'ol'
+            if (!list || list.type !== type) flushList()
+            if (!list) list = { type, items: [] }
+            list.items.push((unordered || ordered)[1])
+            index += 1
+            continue
+          }
+
+          flushList()
+          flushBlockquote()
+          paragraph.push(trimmed)
+          index += 1
+        }
+
+        flushParagraph()
+        flushList()
+        flushBlockquote()
+        return output.join('\n')
+      }
+
+      function updateActiveHeading() {
+        if (!tocHeadings.length) return
+
+        let activeHeading = tocHeadings[0]
+        for (const heading of tocHeadings) {
+          if (heading.getBoundingClientRect().top > 120) break
+          activeHeading = heading
+        }
+        if (
+          window.innerHeight + window.scrollY >=
+          document.documentElement.scrollHeight - 2
+        ) {
+          activeHeading = tocHeadings[tocHeadings.length - 1]
+        }
+
+        for (const link of tocLinks) {
+          const isActive = link.dataset.headingId === activeHeading.id
+          link.classList.toggle('is-active', isActive)
+          if (isActive) {
+            link.setAttribute('aria-current', 'location')
+          } else {
+            link.removeAttribute('aria-current')
+          }
+        }
+      }
+
+      function buildTableOfContents() {
+        tocHeadings = [...content.querySelectorAll('h1, h2')]
+        tocLinks = []
+        tocNav.replaceChildren()
+
+        if (!tocHeadings.length) {
+          const empty = document.createElement('span')
+          empty.className = 'toc-empty'
+          empty.textContent = '暂无目录'
+          tocNav.append(empty)
+          return
+        }
+
+        const usedIds = new Map()
+        for (const [index, heading] of tocHeadings.entries()) {
+          const title = heading.textContent.trim()
+          const generatedId =
+            title
+              .normalize('NFKC')
+              .toLowerCase()
+              .replace(/[^\p{L}\p{N}]+/gu, '-')
+              .replace(/^-+|-+$/g, '') || `section-${index + 1}`
+          const occurrence = (usedIds.get(generatedId) || 0) + 1
+          usedIds.set(generatedId, occurrence)
+          heading.id =
+            occurrence === 1 ? generatedId : `${generatedId}-${occurrence}`
+
+          const link = document.createElement('a')
+          const level = Number(heading.tagName.slice(1))
+          link.href = `#${heading.id}`
+          link.textContent = title
+          link.className = `toc-link toc-level-${level}`
+          link.dataset.headingId = heading.id
+          link.addEventListener('click', (event) => {
+            event.preventDefault()
+            window.history.pushState(
+              null,
+              '',
+              `#${encodeURIComponent(heading.id)}`
+            )
+            heading.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            closeSidebar()
+          })
+          tocNav.append(link)
+          tocLinks.push(link)
+        }
+
+        const requestedHeading = document.getElementById(
+          decodeURIComponent(window.location.hash.slice(1))
+        )
+        if (requestedHeading) {
+          requestAnimationFrame(() =>
+            requestedHeading.scrollIntoView({ block: 'start' })
+          )
+        }
+        updateActiveHeading()
+      }
+
+      function closeSidebar() {
+        sidebar.classList.remove('is-open')
+        sidebarOverlay.classList.remove('is-open')
+        sidebarToggle.setAttribute('aria-expanded', 'false')
+      }
+
+      function toggleSidebar() {
+        const isOpen = !sidebar.classList.contains('is-open')
+        sidebar.classList.toggle('is-open', isOpen)
+        sidebarOverlay.classList.toggle('is-open', isOpen)
+        sidebarToggle.setAttribute('aria-expanded', String(isOpen))
+      }
+
+      function applyBranding(status = {}) {
+        const systemName = String(status.system_name || 'New API').trim()
+        const configuredAddress = String(status.server_address || '').trim()
+        const siteURL = new URL(
+          configuredAddress || '/',
+          window.location.origin
+        )
+        const domain = siteURL.host || window.location.host
+        const logoURL = String(status.logo || '/logo.png').trim() || '/logo.png'
+
+        sidebarName.textContent = systemName
+        sidebarDomain.textContent = domain
+        heroDomain.textContent = domain
+        pageTitle.textContent = `${systemName} 使用文档`
+        document.title = `${systemName} 使用文档`
+        sidebarHome.href = siteURL.href
+        sidebarBack.href = siteURL.href
+        siteBadge.href = siteURL.href
+
+        for (const logo of [sidebarLogo, heroLogo]) {
+          logo.src = logoURL
+          logo.alt = `${systemName} Logo`
+          logo.addEventListener(
+            'error',
+            () => {
+              logo.src = '/logo.png'
+            },
+            { once: true }
+          )
+        }
+      }
+
+      applyBranding()
+      fetch('/api/status', { cache: 'no-store' })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((payload) => {
+          if (payload?.success && payload.data) applyBranding(payload.data)
+        })
+        .catch(() => {})
+
+      content.addEventListener('click', (event) => {
+        const anchor = event.target.closest('a[href^="#"]')
+        if (!anchor) return
+        const heading = document.getElementById(
+          decodeURIComponent(anchor.hash.slice(1))
+        )
+        if (!heading) return
+        event.preventDefault()
+        window.history.pushState(null, '', anchor.hash)
+        heading.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+
+      sidebarToggle.addEventListener('click', toggleSidebar)
+      sidebarOverlay.addEventListener('click', closeSidebar)
+      window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeSidebar()
+      })
+      window.addEventListener('scroll', updateActiveHeading, { passive: true })
+
+      fetch(`${markdownUrl}?v=${Date.now()}`, { cache: 'no-store' })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`)
+          }
+          return response.text()
+        })
+        .then((markdown) => {
+          content.innerHTML = parseMarkdown(markdown)
+          buildTableOfContents()
+        })
+        .catch((error) => {
+          tocNav.replaceChildren()
+          const empty = document.createElement('span')
+          empty.className = 'toc-empty'
+          empty.textContent = '目录加载失败'
+          tocNav.append(empty)
+          content.innerHTML = `
+            <div class="error">
+              <strong>文档加载失败</strong>
+              <p>请确认静态文档 <code>${markdownUrl}</code> 存在并已随前端资源发布。</p>
+              <p>${escapeHtml(error.message)}</p>
+            </div>
+          `
+        })
+    </script>
+  </body>
+</html>

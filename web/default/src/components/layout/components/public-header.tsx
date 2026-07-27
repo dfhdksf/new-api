@@ -98,6 +98,35 @@ export function PublicHeader(props: PublicHeaderProps) {
   const displaySiteName = customSiteName || systemName
   const links = dynamicLinks.length > 0 ? dynamicLinks : navLinks
 
+  let brandLogo = customLogo ? (
+    customLogo
+  ) : (
+    <HeaderLogo
+      src={systemLogo}
+      loading={loading}
+      logoLoaded={logoLoaded}
+      className='size-full rounded-lg object-contain'
+    />
+  )
+  if (loading) {
+    brandLogo = <Skeleton className='size-full rounded-lg' />
+  }
+
+  let desktopAuthContent = (
+    <Button
+      size='sm'
+      className='h-8 rounded-lg px-3.5 text-xs font-medium'
+      render={<Link to='/sign-in' />}
+    >
+      {t('Sign in')}
+    </Button>
+  )
+  if (loading) {
+    desktopAuthContent = <Skeleton className='h-8 w-20 rounded-lg' />
+  } else if (isAuthenticated) {
+    desktopAuthContent = <ProfileDropdown />
+  }
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
     onScroll()
@@ -196,18 +225,7 @@ export function PublicHeader(props: PublicHeaderProps) {
               className='group flex shrink-0 items-center gap-2.5'
             >
               <div className='flex size-7 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105'>
-                {loading ? (
-                  <Skeleton className='size-full rounded-lg' />
-                ) : customLogo ? (
-                  customLogo
-                ) : (
-                  <HeaderLogo
-                    src={systemLogo}
-                    loading={loading}
-                    logoLoaded={logoLoaded}
-                    className='size-full rounded-lg object-contain'
-                  />
-                )}
+                {brandLogo}
               </div>
               <span className='text-sm font-semibold tracking-tight'>
                 {loading ? <Skeleton className='h-4 w-16' /> : displaySiteName}
@@ -216,15 +234,15 @@ export function PublicHeader(props: PublicHeaderProps) {
 
             {/* Desktop nav */}
             <div className='hidden items-center gap-0.5 sm:flex'>
-              {links.map((link, i) => {
+              {links.map((link) => {
                 const isActive = pathname === link.href
-                if (link.external) {
+                if (link.external || link.reloadDocument) {
                   return (
                     <a
-                      key={i}
+                      key={`${link.title}-${link.href}`}
                       href={link.href}
-                      target='_blank'
-                      rel='noopener noreferrer'
+                      target={link.external ? '_blank' : undefined}
+                      rel={link.external ? 'noopener noreferrer' : undefined}
                       aria-disabled={link.disabled}
                       tabIndex={link.disabled ? -1 : undefined}
                       onClick={(event) => handleNavLinkClick(event, link)}
@@ -239,7 +257,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                 }
                 return (
                   <Link
-                    key={i}
+                    key={`${link.title}-${link.href}`}
                     to={link.href}
                     disabled={link.disabled}
                     onClick={(event) => handleNavLinkClick(event, link)}
@@ -280,19 +298,7 @@ export function PublicHeader(props: PublicHeaderProps) {
               {showAuthButtons && (
                 <>
                   <div className='bg-border/40 mx-1 h-4 w-px' />
-                  {loading ? (
-                    <Skeleton className='h-8 w-20 rounded-lg' />
-                  ) : isAuthenticated ? (
-                    <ProfileDropdown />
-                  ) : (
-                    <Button
-                      size='sm'
-                      className='h-8 rounded-lg px-3.5 text-xs font-medium'
-                      render={<Link to='/sign-in' />}
-                    >
-                      {t('Sign in')}
-                    </Button>
-                  )}
+                  {desktopAuthContent}
                 </>
               )}
             </div>
@@ -361,13 +367,13 @@ export function PublicHeader(props: PublicHeaderProps) {
               const transitionStyle = {
                 transitionDelay: mobileOpen ? `${100 + i * 50}ms` : '0ms',
               }
-              if (link.external) {
+              if (link.external || link.reloadDocument) {
                 return (
                   <a
-                    key={i}
+                    key={`${link.title}-${link.href}`}
                     href={link.href}
-                    target='_blank'
-                    rel='noopener noreferrer'
+                    target={link.external ? '_blank' : undefined}
+                    rel={link.external ? 'noopener noreferrer' : undefined}
                     aria-disabled={link.disabled}
                     tabIndex={link.disabled ? -1 : undefined}
                     onClick={(event) => handleNavLinkClick(event, link, true)}
@@ -380,7 +386,7 @@ export function PublicHeader(props: PublicHeaderProps) {
               }
               return (
                 <Link
-                  key={i}
+                  key={`${link.title}-${link.href}`}
                   to={link.href}
                   disabled={link.disabled}
                   onClick={(event) => handleNavLinkClick(event, link, true)}

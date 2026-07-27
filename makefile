@@ -9,26 +9,39 @@ DEV_API_SERVICE = new-api
 DEV_POSTGRES_DB = new-api
 DEV_POSTGRES_USER = root
 DEV_SQLITE_PATH ?= one-api.db
+AIR_WEB_HASH_FILE = ./tmp/.air-web-inputs.sha256
+DEPLOY_URL ?= http://localhost:3000
 
-.PHONY: all build-web build-web-classic build-all-web start-api dev dev-api dev-api-rebuild dev-web dev-web-classic reset-setup
+.PHONY: all build-web verify-web-assets build-web-classic build-all-web start-api dev dev-api dev-api-rebuild dev-web dev-web-classic reset-setup
 
 all: build-all-web start-api
 
 build-web:
 	@echo "Building default web..."
 	@cd ./web && bun install --frozen-lockfile
-	@cd $(WEB_DIR) && DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION=$(cat ../../VERSION) bun run build
+	@cd $(WEB_DIR) && DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION=$$(cat ../../VERSION) bun run build
+	@$(MAKE) --no-print-directory verify-web-assets
+
+verify-web-assets:
+	@echo ">>> Verifying public assets were copied to the frontend dist..."
+	@test -d $(WEB_DIR)/dist || { echo ">>> ERROR: $(WEB_DIR)/dist does not exist"; exit 1; }
+	@cd $(WEB_DIR)/public && \
+		find . -type f -print | LC_ALL=C sort | while IFS= read -r file; do \
+			test -f "../dist/$$file" || { echo ">>> ERROR: missing dist asset: $$file"; exit 1; }; \
+			cmp -s "$$file" "../dist/$$file" || { echo ">>> ERROR: stale dist asset: $$file"; exit 1; }; \
+		done
+	@echo ">>> Frontend public assets are up to date"
 
 build-web-classic:
 	@echo "Building classic web..."
 	@cd ./web && bun install --frozen-lockfile
-	@cd $(WEB_CLASSIC_DIR) && VITE_REACT_APP_VERSION=$(cat ../../VERSION) bun run build
+	@cd $(WEB_CLASSIC_DIR) && VITE_REACT_APP_VERSION=$$(cat ../../VERSION) bun run build
 
 build-all-web: build-web build-web-classic
 
 start-api:
 	@echo "Starting api dev server..."
-	@cd $(API_DIR) && go run main.go &
+	@cd $(API_DIR) && go run . &
 
 dev-api:
 	@echo "Starting api services (docker)..."
@@ -80,11 +93,11 @@ CONFIG    := config.yaml
 PID_FILE  := .new-api.pid
 LOG_FILE  := new-api.log
 
-.PHONY: build start stop restart status logs clean air deploy \
-        sync sync-main rebase pull push commit diff log branch
+.PHONY: build start stop restart status logs clean air air-sync-web air-build deploy deploy-fresh \
+        build-image upload release verify-deployment sync sync-main rebase pull push commit diff log branch
 
-build:
-	@echo ">>> Building $(BINARY)..."
+build: build-web
+	@echo ">>> Building $(BINARY) with the latest embedded frontend..."
 	@go build -o $(BINARY) .
 	@echo ">>> Build complete"
 
@@ -157,8 +170,40 @@ db:
 	@echo ">>> MySQL: localhost:3306, Redis: localhost:6379"
 	@echo ">>> 停止: docker compose -f docker-compose.local.yml down"
 
+## Air 每次重编译 Go 前都会检查默认前端输入；仅前端发生变化时才重新构建 dist。
+air-sync-web:
+	@mkdir -p ./tmp
+	@if [ ! -d ./web/node_modules ]; then \
+		echo ">>> Frontend dependencies missing; installing..."; \
+		cd ./web && bun install --frozen-lockfile; \
+	fi
+	@CURRENT_HASH=$$({ \
+		find $(WEB_DIR) -type f \
+			! -path '$(WEB_DIR)/dist/*' \
+			! -path '$(WEB_DIR)/node_modules/*' \
+			! -path '$(WEB_DIR)/.rsbuild-cache/*' \
+			-exec shasum -a 256 {} \;; \
+		for file in VERSION web/package.json web/bun.lock web/bun.lockb; do \
+			if [ -f "$$file" ]; then shasum -a 256 "$$file"; fi; \
+		done; \
+	} | LC_ALL=C sort | shasum -a 256 | awk '{print $$1}'); \
+	PREVIOUS_HASH=$$(cat $(AIR_WEB_HASH_FILE) 2>/dev/null || true); \
+	if [ ! -f $(WEB_DIR)/dist/index.html ] || [ "$$CURRENT_HASH" != "$$PREVIOUS_HASH" ]; then \
+		echo ">>> Frontend changes detected; rebuilding embedded frontend..."; \
+		(cd $(WEB_DIR) && DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION=$$(cat ../../VERSION) bun run build) || exit 1; \
+		make --no-print-directory verify-web-assets || exit 1; \
+		echo "$$CURRENT_HASH" > $(AIR_WEB_HASH_FILE); \
+	else \
+		echo ">>> Frontend unchanged; reusing current dist"; \
+	fi
+
+air-build: air-sync-web
+	@echo ">>> Rebuilding backend with current frontend dist..."
+	@go build -o ./tmp/new-api .
+
 ## 热加载开发模式（自动启动 MySQL + Redis，需要 air: go install github.com/air-verse/air@latest）
 air: db
+	@$(MAKE) --no-print-directory air-sync-web
 	@AIR=$$(go env GOPATH)/bin/air; \
 	if [ ! -f "$$AIR" ]; then \
 	   echo ">>> Installing air..."; \
@@ -263,25 +308,35 @@ branch:
 	echo ">>> Ahead of upstream/main: $$(git rev-list --count upstream/main..HEAD 2>/dev/null || echo 'unknown') commits"; \
 	echo ">>> Behind upstream/main:   $$(git rev-list --count HEAD..upstream/main 2>/dev/null || echo 'unknown') commits"
 
+## 校验容器已经提供最新静态文档。
+verify-deployment:
+	@echo ">>> Verifying deployed documentation at $(DEPLOY_URL)..."
+	@curl --retry 30 --retry-delay 1 --retry-connrefused --retry-all-errors -fsS "$(DEPLOY_URL)/guide.html" | cmp - $(WEB_DIR)/public/guide.html
+	@curl --retry 5 --retry-delay 1 --retry-all-errors -fsS "$(DEPLOY_URL)/docs/guide.md" | cmp - $(WEB_DIR)/public/docs/guide.md
+	@echo ">>> Deployment serves the exact current documentation files"
+
 ## 服务器本地构建部署（不推荐，4C4G 服务器可能 OOM）
 deploy:
-	@echo ">>> Building and deploying new-api (on server)..."
-	@docker compose build new-api
-	@docker compose up -d new-api
+	@echo ">>> Building frontend and backend Docker image on this server..."
+	@docker build -t new-api:latest .
+	@docker compose up -d --force-recreate new-api
+	@$(MAKE) --no-print-directory verify-deployment
 	@echo ">>> Deploy complete. Check: docker compose ps"
 
 ## 无缓存构建部署（不推荐，仅服务器资源充足时使用）
 deploy-fresh:
-	@echo ">>> Building new-api without cache..."
-	@docker compose build --no-cache new-api
-	@docker compose up -d new-api
+	@echo ">>> Building frontend and backend Docker image without cache..."
+	@docker build --no-cache -t new-api:latest .
+	@docker compose up -d --force-recreate new-api
+	@$(MAKE) --no-print-directory verify-deployment
 	@echo ">>> Deploy complete. Check: docker compose ps"
 
 ## ─── 部署流程（本地 Mac 构建 → 远程服务器上线）(推荐)────────────────────
 ##
 ## 使用方式：
 ##   make release SERVER=root@1.2.3.4        # 一键：构建+传输+上线
-##   make release SERVER=root@1.2.3.4 PATH=/opt/new-api
+## make release SERVER=root@154.219.106.58 REMOTE_PATH=/root/new-api
+## Llf123321..
 ##   make build-image                         # 仅构建镜像（不传输）
 ##   make upload SERVER=root@1.2.3.4          # 仅传输+上线（已有镜像）
 ##
@@ -310,6 +365,7 @@ build-image:
 	@echo ">>> [1/4] Building frontend..."
 	@cd ./web && bun install --frozen-lockfile
 	@cd $(WEB_DIR) && DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION=$$(cat ../../VERSION) bun run build
+	@$(MAKE) --no-print-directory verify-web-assets
 	@echo ">>> [2/4] Cross-compiling Go binary (linux/amd64)..."
 	@GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w" -o new-api-linux-amd64 .
 	@echo ">>> [3/4] Packaging Docker image..."
@@ -330,9 +386,18 @@ upload:
 	@echo ">>> Uploading $(IMAGE_FILE) to $(SERVER):$(REMOTE_PATH)/"
 	@scp $(IMAGE_FILE) $(SERVER):$(REMOTE_PATH)/
 	@echo ">>> Loading image and restarting..."
-	@ssh $(SERVER) "cd $(REMOTE_PATH) && docker load -i $(IMAGE_FILE) && docker compose up -d new-api && rm -f $(IMAGE_FILE)"
-	@echo ">>> Deployed v$$(cat VERSION)! Verify: curl -s http://$$(echo $(SERVER) | cut -d@ -f2):3000/api/status | grep version"
-
+	@ssh $(SERVER) 'cd $(REMOTE_PATH) && \
+		docker load -i $(IMAGE_FILE) && \
+		docker compose up -d --force-recreate new-api && \
+		for attempt in $$(seq 1 30); do \
+			docker compose exec -T new-api wget -q -O - http://localhost:3000/guide.html | grep -q sidebar-brand && break; \
+			if [ "$$attempt" -eq 30 ]; then echo ">>> ERROR: documentation page did not become ready"; exit 1; fi; \
+			sleep 1; \
+		done'
+	@ssh $(SERVER) 'cd $(REMOTE_PATH) && docker compose exec -T new-api wget -q -O - http://localhost:3000/guide.html' | cmp - $(WEB_DIR)/public/guide.html
+	@ssh $(SERVER) 'cd $(REMOTE_PATH) && docker compose exec -T new-api wget -q -O - http://localhost:3000/docs/guide.md' | cmp - $(WEB_DIR)/public/docs/guide.md
+	@ssh $(SERVER) 'cd $(REMOTE_PATH) && rm -f $(IMAGE_FILE)'
+	@echo ">>> Deployed v$$(cat VERSION); server is serving the exact current documentation files"
 ## 一键发布：构建 + 传输 + 上线
 release: build-image upload
 
