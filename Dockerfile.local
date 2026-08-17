@@ -5,8 +5,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && update-ca-certificates
 
+ARG APP_VERSION
+
 COPY new-api-linux-amd64 /new-api
-COPY VERSION /data/VERSION
+RUN test -n "$APP_VERSION" && mkdir -p /data && printf '%s\n' "$APP_VERSION" > /data/VERSION
 COPY LICENSE NOTICE THIRD-PARTY-LICENSES.md /licenses/
 EXPOSE 3000
 WORKDIR /data

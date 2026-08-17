@@ -173,23 +173,55 @@ deploy-fresh:
 
 SERVER ?= ubuntu@82.156.124.82
 REMOTE_PATH ?= /home/ubuntu/new-api
+VERIFY_URL ?=
+RELEASE_VERSION ?= $(if $(version),$(version),$(shell cat VERSION))
 IMAGE_FILE = new-api-image.tar.gz
+IMAGE_TAR = $(basename $(IMAGE_FILE))
 
 build-image:
-	@if [ -n "$(version)" ]; then echo "$(version)" > VERSION; fi
-	@VERSION=$$(cat VERSION); \
-	echo ">>> Building frontend and Linux image v$$VERSION..."; \
+	@set -eu; \
+	if [ -n "$$(git status --porcelain)" ]; then \
+		echo ">>> ERROR: working tree is not clean; commit or stash changes before release"; \
+		git status --short; \
+		exit 1; \
+	fi; \
+	version="$(RELEASE_VERSION)"; \
+	test -n "$$version"; \
+	echo ">>> Building frontend and Linux image v$$version..."; \
+	trap 'rm -f new-api-linux-amd64' EXIT; \
 	make --no-print-directory build-web; \
-	GOWORK=off GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/QuantumNous/new-api/common.Version=$$VERSION" -o new-api-linux-amd64 .; \
-	docker build --platform linux/amd64 --label "org.opencontainers.image.version=$$VERSION" -t new-api:latest -t new-api:$$VERSION -f Dockerfile.local .; \
-	docker save new-api:latest | gzip > $(IMAGE_FILE); \
-	rm -f new-api-linux-amd64
+	GOWORK=off GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/QuantumNous/new-api/common.Version=$$version" -o new-api-linux-amd64 .; \
+	docker build --platform linux/amd64 --build-arg "APP_VERSION=$$version" --label "org.opencontainers.image.version=$$version" -t new-api:latest -t new-api:$$version -f Dockerfile.local .; \
+	docker save -o $(IMAGE_TAR) new-api:$$version; \
+	gzip -f $(IMAGE_TAR); \
+	test -s $(IMAGE_FILE); \
+	echo ">>> Image ready: new-api:$$version ($$(du -h $(IMAGE_FILE) | cut -f1))"
 
 upload:
-	@if [ ! -f $(IMAGE_FILE) ]; then echo ">>> ERROR: $(IMAGE_FILE) does not exist; run make build-image first"; exit 1; fi
-	@scp $(IMAGE_FILE) $(SERVER):$(REMOTE_PATH)/
-	@ssh $(SERVER) 'cd $(REMOTE_PATH) && docker load -i $(IMAGE_FILE) && docker compose up -d --force-recreate new-api && rm -f $(IMAGE_FILE)'
-	@echo ">>> Deployed v$$(cat VERSION)"
+	@set -eu; \
+	if [ -z "$(VERIFY_URL)" ]; then echo ">>> ERROR: VERIFY_URL is required for external health verification"; exit 1; fi; \
+	test -s $(IMAGE_FILE); \
+	echo ">>> Uploading $(IMAGE_FILE) to $(SERVER):$(REMOTE_PATH)/"; \
+	ssh $(SERVER) 'test -d "$(REMOTE_PATH)" && test -f "$(REMOTE_PATH)/docker-compose.yml"'; \
+	scp $(IMAGE_FILE) $(SERVER):$(REMOTE_PATH)/
+	@ssh $(SERVER) 'set -eu; \
+		cd "$(REMOTE_PATH)"; \
+		docker compose config -q; \
+		docker load -i $(IMAGE_FILE); \
+		docker image inspect new-api:$(RELEASE_VERSION) >/dev/null; \
+		docker tag new-api:$(RELEASE_VERSION) new-api:latest; \
+		docker compose up -d --force-recreate new-api; \
+		for attempt in $$(seq 1 30); do \
+			status=$$(docker inspect --format "{{.State.Health.Status}}" new-api 2>/dev/null || true); \
+			[ "$$status" = healthy ] && break; \
+			sleep 2; \
+		done; \
+		[ "$$(docker inspect --format "{{.State.Health.Status}}" new-api 2>/dev/null || true)" = healthy ]; \
+		docker compose exec -T new-api wget -q -O - http://localhost:3000/api/status | grep -Eq "\"success\"[[:space:]]*:[[:space:]]*true"; \
+		rm -f $(IMAGE_FILE)'
+	@echo ">>> Verifying externally at $(VERIFY_URL)/api/status..."
+	@curl --retry 30 --retry-delay 1 --retry-connrefused --retry-all-errors -fsS "$(VERIFY_URL)/api/status" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true'
+	@echo ">>> Deployed and verified v$(RELEASE_VERSION)"
 
 release: build-image upload
 
