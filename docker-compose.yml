@@ -16,7 +16,7 @@ version: '3.4' # For compatibility with older Docker versions
 
 services:
   new-api:
-    image: new-api:latest
+    image: new-api:${IMAGE_TAG:-latest}
     # build: .  # 不在服务器上构建，使用本地 make release 推送的镜像
     container_name: new-api
     restart: always

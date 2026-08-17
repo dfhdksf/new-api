@@ -162,31 +162,41 @@ verify-deployment:
 	@echo ">>> Deployment serves the exact current documentation files"
 
 deploy:
-	@docker build -t new-api:latest .
-	@docker compose up -d --force-recreate new-api
+	@set -eu; \
+	version="$(RELEASE_VERSION)"; \
+	if [ -z "$$version" ]; then version="$$(date +%Y%m%d-%H%M%S)-g$$(git rev-parse --short=12 HEAD)"; fi; \
+	case "$$version" in *[!A-Za-z0-9_.-]*|'') echo ">>> ERROR: invalid release version: $$version"; exit 1;; esac; \
+	docker build -t new-api:latest -t new-api:$$version .; \
+	IMAGE_TAG=$$version docker compose up -d --force-recreate new-api; \
+	echo ">>> Running new-api:$$version"
 	@make --no-print-directory verify-deployment
 
 deploy-fresh:
-	@docker build --no-cache -t new-api:latest .
-	@docker compose up -d --force-recreate new-api
+	@set -eu; \
+	version="$(RELEASE_VERSION)"; \
+	if [ -z "$$version" ]; then version="$$(date +%Y%m%d-%H%M%S)-g$$(git rev-parse --short=12 HEAD)"; fi; \
+	case "$$version" in *[!A-Za-z0-9_.-]*|'') echo ">>> ERROR: invalid release version: $$version"; exit 1;; esac; \
+	docker build --no-cache -t new-api:latest -t new-api:$$version .; \
+	IMAGE_TAG=$$version docker compose up -d --force-recreate new-api; \
+	echo ">>> Running new-api:$$version"
 	@make --no-print-directory verify-deployment
 
 SERVER ?= ubuntu@82.156.124.82
 REMOTE_PATH ?= /home/ubuntu/new-api
-VERIFY_URL ?=
-RELEASE_VERSION ?= $(if $(version),$(version),$(shell cat VERSION))
+VERIFY_URL ?= https://tokenn.online
+RELEASE_VERSION ?= $(version)
+RELEASE_VERSION_FILE = ./tmp/release-version
 IMAGE_FILE = new-api-image.tar.gz
 IMAGE_TAR = $(basename $(IMAGE_FILE))
+RELEASE_COMPOSE_FILE = docker-compose.release.yml
 
 build-image:
 	@set -eu; \
-	if [ -n "$$(git status --porcelain)" ]; then \
-		echo ">>> ERROR: working tree is not clean; commit or stash changes before release"; \
-		git status --short; \
-		exit 1; \
-	fi; \
 	version="$(RELEASE_VERSION)"; \
-	test -n "$$version"; \
+	if [ -z "$$version" ]; then version="$$(date +%Y%m%d-%H%M%S)-g$$(git rev-parse --short=12 HEAD)"; fi; \
+	case "$$version" in *[!A-Za-z0-9_.-]*|'') echo ">>> ERROR: invalid release version: $$version"; exit 1;; esac; \
+	mkdir -p ./tmp; \
+	printf '%s\n' "$$version" > $(RELEASE_VERSION_FILE); \
 	echo ">>> Building frontend and Linux image v$$version..."; \
 	trap 'rm -f new-api-linux-amd64' EXIT; \
 	make --no-print-directory build-web; \
@@ -200,28 +210,30 @@ build-image:
 upload:
 	@set -eu; \
 	if [ -z "$(VERIFY_URL)" ]; then echo ">>> ERROR: VERIFY_URL is required for external health verification"; exit 1; fi; \
+	version="$(RELEASE_VERSION)"; \
+	if [ -z "$$version" ]; then test -s $(RELEASE_VERSION_FILE); version=$$(cat $(RELEASE_VERSION_FILE)); fi; \
+	case "$$version" in *[!A-Za-z0-9_.-]*|'') echo ">>> ERROR: invalid release version: $$version"; exit 1;; esac; \
 	test -s $(IMAGE_FILE); \
 	echo ">>> Uploading $(IMAGE_FILE) to $(SERVER):$(REMOTE_PATH)/"; \
 	ssh $(SERVER) 'test -d "$(REMOTE_PATH)" && test -f "$(REMOTE_PATH)/docker-compose.yml"'; \
-	scp $(IMAGE_FILE) $(SERVER):$(REMOTE_PATH)/
-	@ssh $(SERVER) 'set -eu; \
+	scp $(IMAGE_FILE) $(RELEASE_COMPOSE_FILE) $(SERVER):$(REMOTE_PATH)/; \
+	ssh $(SERVER) 'set -eu; \
 		cd "$(REMOTE_PATH)"; \
-		docker compose config -q; \
+		docker compose -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) config -q; \
 		docker load -i $(IMAGE_FILE); \
-		docker image inspect new-api:$(RELEASE_VERSION) >/dev/null; \
-		docker tag new-api:$(RELEASE_VERSION) new-api:latest; \
-		docker compose up -d --force-recreate new-api; \
+		docker image inspect new-api:'"$$version"' >/dev/null; \
+		IMAGE_TAG='"$$version"' docker compose -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) up -d --force-recreate new-api; \
 		for attempt in $$(seq 1 30); do \
 			status=$$(docker inspect --format "{{.State.Health.Status}}" new-api 2>/dev/null || true); \
 			[ "$$status" = healthy ] && break; \
 			sleep 2; \
 		done; \
 		[ "$$(docker inspect --format "{{.State.Health.Status}}" new-api 2>/dev/null || true)" = healthy ]; \
-		docker compose exec -T new-api wget -q -O - http://localhost:3000/api/status | grep -Eq "\"success\"[[:space:]]*:[[:space:]]*true"; \
-		rm -f $(IMAGE_FILE)'
-	@echo ">>> Verifying externally at $(VERIFY_URL)/api/status..."
-	@curl --retry 30 --retry-delay 1 --retry-connrefused --retry-all-errors -fsS "$(VERIFY_URL)/api/status" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true'
-	@echo ">>> Deployed and verified v$(RELEASE_VERSION)"
+		docker compose -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) exec -T new-api wget -q -O - http://localhost:3000/api/status | grep -Eq "\"success\"[[:space:]]*:[[:space:]]*true"; \
+		rm -f $(IMAGE_FILE)'; \
+	echo ">>> Verifying externally at $(VERIFY_URL)/api/status..."; \
+	curl --retry 30 --retry-delay 1 --retry-connrefused --retry-all-errors -fsS "$(VERIFY_URL)/api/status" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true'; \
+	echo ">>> Deployed and verified v$$version"
 
 release: build-image upload
 

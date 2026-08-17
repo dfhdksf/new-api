@@ -1,0 +1,14 @@
+#在开发机mac上执行make release发布到服务器时专用的镜像版本覆盖文件
+#  它不能单独运行，必须和基础 Compose 文件叠加：
+#  IMAGE_TAG=20260817-212253-g6234c1f1a02 \
+#  docker compose \
+#  -f docker-compose.yml \
+#  -f docker-compose.release.yml \
+#  up -d --force-recreate new-api
+#  它的目的不是启动数据库或 Redis，而是确保发布时明确使用：
+#  new-api:<本次版本>
+#  而不是依赖 latest。
+#  发布脚本会自动把它上传到服务器，因此不需要手工复制。
+services:
+  new-api:
+    image: new-api:${IMAGE_TAG:-latest}
