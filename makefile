@@ -183,12 +183,20 @@ deploy-fresh:
 
 SERVER ?= ubuntu@82.156.124.82
 REMOTE_PATH ?= /home/ubuntu/new-api
-VERIFY_URL ?= https://tokenn.online
+VERIFY_URL ?= https://tokenn.site
 RELEASE_VERSION ?= $(version)
 RELEASE_VERSION_FILE = ./tmp/release-version
 IMAGE_FILE = new-api-image.tar.gz
 IMAGE_TAR = $(basename $(IMAGE_FILE))
 RELEASE_COMPOSE_FILE = docker-compose.release.yml
+
+#生成环境部署命令:
+#make release \
+#  SERVER=root@154.219.106.58 \
+#  REMOTE_PATH=/root/new-api \
+#  VERIFY_URL=https://tokenn.site
+
+
 
 build-image:
 	@set -eu; \
@@ -244,3 +252,7 @@ docker-clean:
 clean:
 	@rm -f $(BINARY) $(PID_FILE) $(LOG_FILE) new-api-linux-amd64 $(IMAGE_FILE)
 	@rm -rf tmp
+
+
+
+# make release SERVER=root@154.219.106.58 REMOTE_PATH=/root/new-api VERIFY_URL=https://tokenn.site
