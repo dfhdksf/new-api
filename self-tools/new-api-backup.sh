@@ -2,6 +2,9 @@
 set -Eeuo pipefail
 umask 077
 
+#备份数据库文件到本地
+
+
 APP_DIR="/root/new-api"
 BACKUP_ROOT="/var/backups/new-api"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"

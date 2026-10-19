@@ -183,6 +183,7 @@ deploy-fresh:
 
 SERVER ?= ubuntu@82.156.124.82
 REMOTE_PATH ?= /home/ubuntu/new-api
+DEPLOY_PROJECT ?= new-api # 用来指定 Docker Compose 项目的名称。Compose 会用它区分不同部署项目，并据此命名容器、网络和命名卷，避免同一台服务器上的实例互相冲突
 VERIFY_URL ?= https://tokenn.site
 RELEASE_VERSION ?= $(version)
 RELEASE_VERSION_FILE = ./tmp/release-version
@@ -194,6 +195,7 @@ RELEASE_COMPOSE_FILE = docker-compose.release.yml
 #make release \
 #  SERVER=root@154.219.106.58 \
 #  REMOTE_PATH=/root/new-api \
+#  DEPLOY_PROJECT=new-api-second \
 #  VERIFY_URL=https://tokenn.site
 
 
@@ -221,23 +223,27 @@ upload:
 	version="$(RELEASE_VERSION)"; \
 	if [ -z "$$version" ]; then test -s $(RELEASE_VERSION_FILE); version=$$(cat $(RELEASE_VERSION_FILE)); fi; \
 	case "$$version" in *[!A-Za-z0-9_.-]*|'') echo ">>> ERROR: invalid release version: $$version"; exit 1;; esac; \
+	case "$(DEPLOY_PROJECT)" in *[!a-zA-Z0-9_-]*|'') echo ">>> ERROR: invalid deploy project: $(DEPLOY_PROJECT)"; exit 1;; esac; \
 	test -s $(IMAGE_FILE); \
 	echo ">>> Uploading $(IMAGE_FILE) to $(SERVER):$(REMOTE_PATH)/"; \
 	ssh $(SERVER) 'test -d "$(REMOTE_PATH)" && test -f "$(REMOTE_PATH)/docker-compose.yml"'; \
 	scp $(IMAGE_FILE) $(RELEASE_COMPOSE_FILE) $(SERVER):$(REMOTE_PATH)/; \
 	ssh $(SERVER) 'set -eu; \
 		cd "$(REMOTE_PATH)"; \
-		docker compose -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) config -q; \
+		docker compose -p "$(DEPLOY_PROJECT)" -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) config -q; \
 		docker load -i $(IMAGE_FILE); \
 		docker image inspect new-api:'"$$version"' >/dev/null; \
-		IMAGE_TAG='"$$version"' docker compose -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) up -d --force-recreate new-api; \
+		IMAGE_TAG='"$$version"' docker compose -p "$(DEPLOY_PROJECT)" -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) up -d --force-recreate new-api; \
+		container_id=""; \
 		for attempt in $$(seq 1 30); do \
-			status=$$(docker inspect --format "{{.State.Health.Status}}" new-api 2>/dev/null || true); \
+			container_id=$$(docker compose -p "$(DEPLOY_PROJECT)" -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) ps -q new-api); \
+			status=$$(docker inspect --format "{{.State.Health.Status}}" "$$container_id" 2>/dev/null || true); \
 			[ "$$status" = healthy ] && break; \
 			sleep 2; \
 		done; \
-		[ "$$(docker inspect --format "{{.State.Health.Status}}" new-api 2>/dev/null || true)" = healthy ]; \
-		docker compose -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) exec -T new-api wget -q -O - http://localhost:3000/api/status | grep -Eq "\"success\"[[:space:]]*:[[:space:]]*true"; \
+		test -n "$$container_id"; \
+		[ "$$(docker inspect --format "{{.State.Health.Status}}" "$$container_id" 2>/dev/null || true)" = healthy ]; \
+		IMAGE_TAG='"$$version"' docker compose -p "$(DEPLOY_PROJECT)" -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) exec -T new-api wget -q -O - http://localhost:3000/api/status | grep -Eq "\"success\"[[:space:]]*:[[:space:]]*true"; \
 		rm -f $(IMAGE_FILE)'; \
 	echo ">>> Verifying externally at $(VERIFY_URL)/api/status..."; \
 	curl --retry 30 --retry-delay 1 --retry-connrefused --retry-all-errors -fsS "$(VERIFY_URL)/api/status" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true'; \
@@ -256,3 +262,12 @@ clean:
 
 
 # make release SERVER=root@154.219.106.58 REMOTE_PATH=/root/new-api VERIFY_URL=https://tokenn.site
+# make release SERVER=root@45.192.102.168 REMOTE_PATH=/root/new-api-1 DEPLOY_PROJECT=new-api-1 VERIFY_URL=http://127.0.0.1:13334
+
+  ./self-tools/new-api-mysql-migrate.sh \
+    --source root@154.219.106.58 \
+    --source-mysql-container mysql \
+    --target root@45.192.102.168 \
+    --target-dir /root/new-api-1 \
+    --target-project new-api-1 \
+    --database new-api \
