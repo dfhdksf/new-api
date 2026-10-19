@@ -57,6 +57,7 @@ export const SIDEBAR_MODULES_DEFAULT: SidebarModulesAdminConfig = {
   chat: {
     enabled: true,
     playground: true,
+    pelicanTest: true,
     chat: true,
   },
   console: {
@@ -74,6 +75,7 @@ export const SIDEBAR_MODULES_DEFAULT: SidebarModulesAdminConfig = {
   },
   admin: {
     enabled: true,
+    pelicanTest: true,
     channel: true,
     models: true,
     redemption: true,

@@ -33,6 +33,12 @@ export const STATIC_I18N_KEYS = [
   'Auto-disable rules',
   'Channel health checks',
   'Request retry',
+  'Provider default',
+  'Minimal',
+  'Low',
+  'Medium',
+  'High',
+  'Extra high',
 
   // System settings sidebar
   'System Administration',

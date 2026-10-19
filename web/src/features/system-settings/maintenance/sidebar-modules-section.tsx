@@ -92,6 +92,10 @@ export function SidebarModulesSection({
         title: t('Playground'),
         description: t('Experiment with prompts and models in real time.'),
       },
+      pelicanTest: {
+        title: t('Pelican Test'),
+        description: t('Compare model responses with a shared SVG challenge.'),
+      },
       chat: {
         title: t('Chat'),
         description: t('Access previous conversations and start new ones.'),
@@ -130,6 +134,10 @@ export function SidebarModulesSection({
       },
     },
     admin: {
+      pelicanTest: {
+        title: t('Pelican Test'),
+        description: t('Compare model responses with a shared SVG challenge.'),
+      },
       channel: {
         title: t('Channels'),
         description: t('Configure upstream providers and routing.'),
