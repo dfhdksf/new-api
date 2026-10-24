@@ -43,6 +43,15 @@ afterEach(() => {
 })
 
 describe('Pelican Test connection form', () => {
+  test('does not overwrite an unreadable stored draft when opening the page', () => {
+    const unreadable = '{broken-but-preserved'
+    window.localStorage.setItem(PELICAN_STORAGE_KEY, unreadable)
+    render(
+      <ConnectionForm isRunning={false} onStart={vi.fn()} onStop={vi.fn()} />
+    )
+    expect(screen.getByLabelText('Base URL')).toHaveValue('')
+    expect(window.localStorage.getItem(PELICAN_STORAGE_KEY)).toBe(unreadable)
+  })
   test('shows field errors and does not start with missing details', async () => {
     const onStart = vi.fn()
     render(

@@ -24,7 +24,9 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/status", controller.GetStatus)
 		apiRouter.GET("/uptime/status", controller.GetUptimeKumaStatus)
 		apiRouter.GET("/models", middleware.UserAuth(), controller.DashboardListModels)
-		apiRouter.POST("/pelican-test/models", middleware.UserAuth(), middleware.CriticalRateLimit(), middleware.DisableCache(), controller.FetchPelicanModels)
+		//apiRouter.POST("/pelican-test/models", middleware.UserAuth(), middleware.CriticalRateLimit(), middleware.DisableCache(), controller.FetchPelicanModels)
+		apiRouter.POST("/pelican-test/models", middleware.UserAuth(), middleware.DisableCache(), controller.FetchPelicanModels)
+
 		apiRouter.POST("/pelican-test/run", middleware.UserAuth(), middleware.DisableCache(), controller.RunPelicanTest)
 		apiRouter.GET("/status/test", middleware.AdminAuth(), controller.TestStatus)
 		apiRouter.GET("/notice", controller.GetNotice)

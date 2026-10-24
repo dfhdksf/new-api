@@ -27,7 +27,7 @@ import type { PelicanTestConfig } from '../types'
 import { pelicanDraftSchema, migrateLegacyCredentials } from './config-schema'
 
 export const PELICAN_STORAGE_KEY = 'new-api:pelican-test:connections:v1'
-const storedSchema = z.object({
+export const pelicanStoredConfigSchema = z.object({
   version: z.literal(1),
   config: pelicanDraftSchema.extend({
     connections: z
@@ -51,7 +51,7 @@ export function loadPelicanConfig(): PelicanTestConfig {
   try {
     const saved = window.localStorage.getItem(PELICAN_STORAGE_KEY)
     if (!saved) return fallback
-    const parsed = storedSchema.safeParse(JSON.parse(saved))
+    const parsed = pelicanStoredConfigSchema.safeParse(JSON.parse(saved))
     if (!parsed.success) return fallback
     const ids = new Set(
       parsed.data.config.connections.map((connection) => connection.id)
@@ -72,7 +72,9 @@ export function loadPelicanConfig(): PelicanTestConfig {
   }
 }
 
-export function savePelicanConfig(config: PelicanTestConfig): void {
+export function getRememberedPelicanConfig(
+  config: PelicanTestConfig
+): PelicanTestConfig {
   // Persist only this allowlist. Unchecked keys never reach browser storage.
   const saved: PelicanTestConfig = {
     efforts: config.efforts,
@@ -95,8 +97,12 @@ export function savePelicanConfig(config: PelicanTestConfig): void {
       modelsText: connection.modelsText,
     })),
   }
+  return pelicanStoredConfigSchema.parse({ version: 1, config: saved }).config
+}
+
+export function savePelicanConfig(config: PelicanTestConfig): void {
   window.localStorage.setItem(
     PELICAN_STORAGE_KEY,
-    JSON.stringify({ version: 1, config: saved })
+    JSON.stringify({ version: 1, config: getRememberedPelicanConfig(config) })
   )
 }

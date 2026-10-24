@@ -57,6 +57,7 @@ import {
   type PelicanTestConfig,
   type PelicanRerunRequest,
 } from '../types'
+import { ConfigurationLibrary } from './configuration-library'
 import { ConnectionCard } from './connection-card'
 
 type ConnectionFormProps = {
@@ -103,7 +104,6 @@ export function ConnectionForm({
         setStorageFailed(true)
       }
     }
-    persist()
     const subscription = watch(persist)
     return () => subscription.unsubscribe()
   }, [watch, getValues])
@@ -176,7 +176,15 @@ export function ConnectionForm({
             : t('Connection settings are saved automatically in this browser.')}
         </p>
       </CardHeader>
-      <CardContent>
+      <CardContent className='flex flex-col gap-5'>
+        <ConfigurationLibrary
+          disabled={isRunning}
+          getConfig={getValues}
+          onLoad={(saved) => {
+            form.reset(saved)
+            setRestoredWithoutKeys(false)
+          }}
+        />
         <Form {...form}>
           <form
             className='flex flex-col gap-5'

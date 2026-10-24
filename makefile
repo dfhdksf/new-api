@@ -225,7 +225,8 @@ deploy-fresh:
 
 SERVER ?= ubuntu@82.156.124.82
 REMOTE_PATH ?= /home/ubuntu/new-api
-DEPLOY_PROJECT ?= new-api # 用来指定 Docker Compose 项目的名称。Compose 会用它区分不同部署项目，并据此命名容器、网络和命名卷，避免同一台服务器上的实例互相冲突
+# 用来指定 Docker Compose 项目的名称。Compose 会用它区分不同部署项目，并据此命名容器、网络和命名卷，避免同一台服务器上的实例互相冲突
+DEPLOY_PROJECT ?= new-api
 VERIFY_URL ?= https://tokenn.site
 RELEASE_VERSION ?= $(version)
 RELEASE_VERSION_FILE = ./tmp/release-version
@@ -301,7 +302,21 @@ clean:
 	@rm -f $(BINARY) $(PID_FILE) $(LOG_FILE) new-api-linux-amd64 $(IMAGE_FILE)
 	@rm -rf tmp
 
+# docker compose ls -a能够列出所有的compose项目名
 
+# 第二套
+#make release \
+#  SERVER=root@45.192.102.168 \
+#  REMOTE_PATH=/root/new-api \
+#  DEPLOY_PROJECT=newapi \
+#  VERIFY_URL=https://tokenn.online
+
+# 第一套
+make release \
+  SERVER=root@45.192.102.168 \
+  REMOTE_PATH=/root/new-api-1 \
+  DEPLOY_PROJECT=new-api-1 \
+  VERIFY_URL=https://tokenn.site
 
 # make release SERVER=root@154.219.106.58 REMOTE_PATH=/root/new-api VERIFY_URL=https://tokenn.site
 

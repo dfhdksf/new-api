@@ -38,6 +38,9 @@ cat > "${MOCK_BIN}/ssh" <<'MOCK'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 printf 'ssh %s\n' "$*" >> "$CALL_LOG"
+if [[ "$*" == *"sha256sum -c SHA256SUMS"* ]]; then
+  exit "${SSH_VERIFY_EXIT_CODE:-0}"
+fi
 MOCK
 
 cat > "${MOCK_BIN}/find" <<'MOCK'
@@ -63,6 +66,7 @@ BACKUP_PATH="$(find "${BACKUP_ROOT}" -mindepth 1 -maxdepth 1 -type d -name 'new-
 test -n "${BACKUP_PATH}"
 test -s "${BACKUP_PATH}/database.sql.gz"
 test -s "${BACKUP_PATH}/config.tar.gz"
+(cd "${BACKUP_PATH}" && sha256sum -c SHA256SUMS)
 grep -Fq "${BACKUP_REMOTE}:${BACKUP_REMOTE_DIR}/.new-api-" "${CALL_LOG}"
 grep -Fq "mv -- '${BACKUP_REMOTE_DIR}/.new-api-" "${CALL_LOG}"
 
@@ -77,3 +81,25 @@ if grep -Fq 'find ' "${CALL_LOG}"; then
   printf 'Local retention must not run after a failed remote transfer.\n' >&2
   exit 1
 fi
+
+# 校验失败也必须报告失败、保留本地备份，并跳过清理。
+rm -f "${CALL_LOG}"
+if SSH_VERIFY_EXIT_CODE=1 bash "${SCRIPT}"; then
+  printf 'Expected backup script to fail when remote verification fails.\n' >&2
+  exit 1
+fi
+if grep -Fq 'find ' "${CALL_LOG}"; then
+  printf 'Local retention must not run after failed remote verification.\n' >&2
+  exit 1
+fi
+BACKUP_COUNT="$(find "${BACKUP_ROOT}" -mindepth 1 -maxdepth 1 -type d -name 'new-api-*' | wc -l | tr -d ' ')"
+test "${BACKUP_COUNT}" -eq 3
+
+# 未配置远端时仍可单独完成本地备份。
+rm -f "${CALL_LOG}"
+BACKUP_REMOTE= BACKUP_REMOTE_DIR= bash "${SCRIPT}"
+if grep -Eq '^(ssh|rsync) ' "${CALL_LOG}"; then
+  printf 'Local-only backup must not access a remote server.\n' >&2
+  exit 1
+fi
+printf 'All backup tests passed.\n'
