@@ -1,0 +1,36 @@
+# Overlay for the existing docker-compose.local.yml MySQL/Redis services.
+# Run through `make local-up` / `make local-update` to preserve dependency containers.
+services:
+  new-api:
+    image: new-api:local-integration
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${LOCAL_APP_PORT:-3000}:3000"
+    volumes:
+      - local_api_data:/data
+    environment:
+      SQL_DSN: ${SQL_DSN:?Set SQL_DSN in .env to the local MySQL service at mysql:3306}
+      REDIS_CONN_STRING: ${REDIS_CONN_STRING:?Set REDIS_CONN_STRING in .env to the local Redis service at redis:6379}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      SESSION_COOKIE_SECURE: "false"
+      SESSION_COOKIE_TRUSTED_URL: ""
+      TZ: Asia/Shanghai
+      NODE_NAME: new-api-local-integration
+      BATCH_UPDATE_ENABLED: "true"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/api/status | grep -Eq '\"success\":[[:space:]]*true'"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 30s
+
+volumes:
+  local_api_data:

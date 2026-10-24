@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import {
   Activity,
+  Bird,
   Box,
   CreditCard,
   FileText,
@@ -36,7 +37,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { type SidebarData } from '@/components/layout/types'
+import type { SidebarData } from '@/components/layout/types'
 import { ROLE } from '@/lib/roles'
 
 /**
@@ -58,6 +59,11 @@ export function useSidebarData(): SidebarData {
             title: t('Playground'),
             url: '/playground',
             icon: FlaskConical,
+          },
+          {
+            title: t('Pelican Test'),
+            url: '/pelican-test',
+            icon: Bird,
           },
           {
             title: t('Chat'),
@@ -119,6 +125,12 @@ export function useSidebarData(): SidebarData {
         id: 'admin',
         title: t('Admin'),
         items: [
+          {
+            title: t('Pelican Test'),
+            url: '/pelican-test',
+            icon: Bird,
+            configModule: { section: 'admin', module: 'pelicanTest' },
+          },
           {
             title: t('Channels'),
             url: '/channels',

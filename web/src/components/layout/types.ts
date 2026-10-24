@@ -40,6 +40,8 @@ type BaseNavItem = {
  * Navigation link type - single link item
  */
 export type NavLink = BaseNavItem & {
+  /** Override URL-based visibility when a page appears in multiple sections. */
+  configModule?: { section: string; module: string }
   url: LinkProps['to'] | (string & {})
   items?: never
   type?: never

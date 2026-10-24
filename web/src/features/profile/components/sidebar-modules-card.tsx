@@ -67,6 +67,13 @@ export function SidebarModulesCard() {
           description: t('AI model testing environment'),
         },
         {
+          key: 'pelicanTest',
+          title: t('Pelican Test'),
+          description: t(
+            'Compare model responses with a shared SVG challenge.'
+          ),
+        },
+        {
           key: 'chat',
           title: t('Chat'),
           description: t('Chat session management'),

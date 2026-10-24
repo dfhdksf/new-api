@@ -10,6 +10,14 @@ DEV_SQLITE_PATH ?= one-api.db
 AIR_WEB_HASH_FILE = ./tmp/.air-web-inputs.sha256
 DEPLOY_URL ?= http://localhost:3000
 
+# Reuse docker-compose.local.yml's existing MySQL/Redis containers and volumes.
+# 本地开发测试,保持mysql和redis不变,修改代码后更换newapi容器从而进行测试
+LOCAL_PROJECT ?= new-api
+LOCAL_APP_PORT ?= 3000
+LOCAL_COMPOSE_FILE ?= docker-compose.local.yml
+LOCAL_INTEGRATION_FILE = docker-compose.integration.yml
+LOCAL_COMPOSE = LOCAL_APP_PORT="$(LOCAL_APP_PORT)" docker compose --project-name "$(LOCAL_PROJECT)" -f "$(LOCAL_COMPOSE_FILE)" -f "$(LOCAL_INTEGRATION_FILE)"
+
 BINARY := new-api
 CONFIG := config.yaml
 PID_FILE := .new-api.pid
@@ -17,7 +25,8 @@ LOG_FILE := new-api.log
 
 .PHONY: all build-web verify-web-assets build-all-web start-api dev dev-api dev-api-rebuild dev-web reset-setup test \
 	build start stop restart status logs clean db air air-sync-web air-build deploy deploy-fresh \
-	build-image upload release verify-deployment docker-clean
+	build-image upload release verify-deployment docker-clean \
+	local-up local-update local-build local-status local-logs local-stop
 
 all: build-all-web start-api
 
@@ -130,6 +139,39 @@ db:
 	@docker compose -f docker-compose.local.yml up -d
 	@echo ">>> MySQL: localhost:3306, Redis: localhost:6379"
 
+# Full frontend/backend integration against the existing local MySQL and Redis.
+# First use: make local-up. Later code changes: make local-update.
+local-up:
+	@$(LOCAL_COMPOSE) config --quiet
+	@$(LOCAL_COMPOSE) up -d --no-recreate --wait --wait-timeout 120 mysql redis
+	@$(MAKE) --no-print-directory local-update
+
+local-build:
+	@$(LOCAL_COMPOSE) build new-api
+
+local-update:
+	@$(LOCAL_COMPOSE) config --quiet
+	@for service in mysql redis; do \
+		container_id=$$($(LOCAL_COMPOSE) ps --status running -q $$service); \
+		if [ -z "$$container_id" ]; then \
+			echo ">>> $$service is not running. Run 'make local-up' first."; \
+			exit 1; \
+		fi; \
+	done
+	@$(MAKE) --no-print-directory local-build
+	@$(LOCAL_COMPOSE) up -d --no-deps --force-recreate --wait --wait-timeout 180 new-api
+	@echo ">>> Local integration ready: http://localhost:$(LOCAL_APP_PORT)/pelican-test"
+
+local-status:
+	@$(LOCAL_COMPOSE) ps -a
+
+local-logs:
+	@$(LOCAL_COMPOSE) logs --follow --tail 100 new-api
+
+# Stop only the application; keep database/cache containers and data available.
+local-stop:
+	@$(LOCAL_COMPOSE) stop new-api
+
 # Air checks the frontend source hash before rebuilding Go. Frontend-only changes
 # are rebuilt once; backend-only changes reuse web/dist.
 air-sync-web:
@@ -183,6 +225,8 @@ deploy-fresh:
 
 SERVER ?= ubuntu@82.156.124.82
 REMOTE_PATH ?= /home/ubuntu/new-api
+# 用来指定 Docker Compose 项目的名称。Compose 会用它区分不同部署项目，并据此命名容器、网络和命名卷，避免同一台服务器上的实例互相冲突
+DEPLOY_PROJECT ?= new-api
 VERIFY_URL ?= https://tokenn.site
 RELEASE_VERSION ?= $(version)
 RELEASE_VERSION_FILE = ./tmp/release-version
@@ -194,6 +238,7 @@ RELEASE_COMPOSE_FILE = docker-compose.release.yml
 #make release \
 #  SERVER=root@154.219.106.58 \
 #  REMOTE_PATH=/root/new-api \
+#  DEPLOY_PROJECT=new-api-second \
 #  VERIFY_URL=https://tokenn.site
 
 
@@ -221,23 +266,27 @@ upload:
 	version="$(RELEASE_VERSION)"; \
 	if [ -z "$$version" ]; then test -s $(RELEASE_VERSION_FILE); version=$$(cat $(RELEASE_VERSION_FILE)); fi; \
 	case "$$version" in *[!A-Za-z0-9_.-]*|'') echo ">>> ERROR: invalid release version: $$version"; exit 1;; esac; \
+	case "$(DEPLOY_PROJECT)" in *[!a-zA-Z0-9_-]*|'') echo ">>> ERROR: invalid deploy project: $(DEPLOY_PROJECT)"; exit 1;; esac; \
 	test -s $(IMAGE_FILE); \
 	echo ">>> Uploading $(IMAGE_FILE) to $(SERVER):$(REMOTE_PATH)/"; \
 	ssh $(SERVER) 'test -d "$(REMOTE_PATH)" && test -f "$(REMOTE_PATH)/docker-compose.yml"'; \
 	scp $(IMAGE_FILE) $(RELEASE_COMPOSE_FILE) $(SERVER):$(REMOTE_PATH)/; \
 	ssh $(SERVER) 'set -eu; \
 		cd "$(REMOTE_PATH)"; \
-		docker compose -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) config -q; \
+		docker compose -p "$(DEPLOY_PROJECT)" -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) config -q; \
 		docker load -i $(IMAGE_FILE); \
 		docker image inspect new-api:'"$$version"' >/dev/null; \
-		IMAGE_TAG='"$$version"' docker compose -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) up -d --force-recreate new-api; \
+		IMAGE_TAG='"$$version"' docker compose -p "$(DEPLOY_PROJECT)" -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) up -d --force-recreate new-api; \
+		container_id=""; \
 		for attempt in $$(seq 1 30); do \
-			status=$$(docker inspect --format "{{.State.Health.Status}}" new-api 2>/dev/null || true); \
+			container_id=$$(docker compose -p "$(DEPLOY_PROJECT)" -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) ps -q new-api); \
+			status=$$(docker inspect --format "{{.State.Health.Status}}" "$$container_id" 2>/dev/null || true); \
 			[ "$$status" = healthy ] && break; \
 			sleep 2; \
 		done; \
-		[ "$$(docker inspect --format "{{.State.Health.Status}}" new-api 2>/dev/null || true)" = healthy ]; \
-		docker compose -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) exec -T new-api wget -q -O - http://localhost:3000/api/status | grep -Eq "\"success\"[[:space:]]*:[[:space:]]*true"; \
+		test -n "$$container_id"; \
+		[ "$$(docker inspect --format "{{.State.Health.Status}}" "$$container_id" 2>/dev/null || true)" = healthy ]; \
+		IMAGE_TAG='"$$version"' docker compose -p "$(DEPLOY_PROJECT)" -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) exec -T new-api wget -q -O - http://localhost:3000/api/status | grep -Eq "\"success\"[[:space:]]*:[[:space:]]*true"; \
 		rm -f $(IMAGE_FILE)'; \
 	echo ">>> Verifying externally at $(VERIFY_URL)/api/status..."; \
 	curl --retry 30 --retry-delay 1 --retry-connrefused --retry-all-errors -fsS "$(VERIFY_URL)/api/status" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true'; \
@@ -253,6 +302,32 @@ clean:
 	@rm -f $(BINARY) $(PID_FILE) $(LOG_FILE) new-api-linux-amd64 $(IMAGE_FILE)
 	@rm -rf tmp
 
+# docker compose ls -a能够列出所有的compose项目名
 
+# 第二套
+#make release \
+#  SERVER=root@45.192.102.168 \
+#  REMOTE_PATH=/root/new-api \
+#  DEPLOY_PROJECT=newapi \
+#  VERIFY_URL=https://tokenn.online
+
+# 第一套
+make release \
+  SERVER=root@45.192.102.168 \
+  REMOTE_PATH=/root/new-api-1 \
+  DEPLOY_PROJECT=new-api-1 \
+  VERIFY_URL=https://tokenn.site
 
 # make release SERVER=root@154.219.106.58 REMOTE_PATH=/root/new-api VERIFY_URL=https://tokenn.site
+
+# 在一台服务器上部署第二套newapi
+# make release SERVER=root@45.192.102.168 REMOTE_PATH=/root/new-api-1 DEPLOY_PROJECT=new-api-1 VERIFY_URL=http://127.0.0.1:13334
+
+# 迁移旧服务器的MySQL数据到新服务器
+#  ./self-tools/new-api-mysql-migrate.sh \
+#    --source root@154.219.106.58 \
+#    --source-mysql-container mysql \
+#    --target root@45.192.102.168 \
+#    --target-dir /root/new-api-1 \
+#    --target-project new-api-1 \
+#    --database new-api \
