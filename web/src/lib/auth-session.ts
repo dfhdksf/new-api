@@ -374,7 +374,13 @@ export async function bootstrapAuthentication(): Promise<RefreshOutcome> {
   }
 
   auth.setBootstrapState('checking')
-  return refreshAuthentication()
+  const outcome = await refreshAuthentication()
+  if (outcome.kind === 'transient_error') {
+    // Stop route loading before a child guard mistakes a failed restore for
+    // an anonymous session. The root error boundary can display the failure.
+    throw outcome.error ?? new Error(t('Request failed'))
+  }
+  return outcome
 }
 
 export function getCommonHeaders(): Record<string, string> {

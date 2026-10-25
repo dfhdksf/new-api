@@ -312,11 +312,11 @@ clean:
 #  VERIFY_URL=https://tokenn.online
 
 # 第一套
-make release \
-  SERVER=root@45.192.102.168 \
-  REMOTE_PATH=/root/new-api-1 \
-  DEPLOY_PROJECT=new-api-1 \
-  VERIFY_URL=https://tokenn.site
+#make release \
+#  SERVER=root@45.192.102.168 \
+#  REMOTE_PATH=/root/new-api-1 \
+#  DEPLOY_PROJECT=new-api-1 \
+#  VERIFY_URL=https://tokenn.site
 
 # make release SERVER=root@154.219.106.58 REMOTE_PATH=/root/new-api VERIFY_URL=https://tokenn.site
 
