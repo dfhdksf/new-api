@@ -107,10 +107,13 @@ export function TopUpGiftSettingsSection(props: TopUpGiftSettingsSectionProps) {
       toast.info(t('No changes to save'))
       return
     }
-    for (const update of updates) {
-      // useUpdateOption already toasts both outcomes; stop at the first failure.
-      const response = await updateOption.mutateAsync(update)
-      if (!response.success) return
+    try {
+      for (const update of updates) {
+        await updateOption.mutateAsync(update)
+      }
+    } catch {
+      // The mutation reports the error once. Keep the draft available for retry.
+      return
     }
     form.reset({
       ...values,

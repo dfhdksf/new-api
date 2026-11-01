@@ -62,15 +62,12 @@ export async function getTopupInfo(): Promise<TopupInfoResponse> {
 }
 
 /**
- * Redeem a topup code. Business failures are toasted by useRedemption, so
- * the interceptor's generic toast is skipped to avoid showing it twice.
+ * Redeem a topup code
  */
 export async function redeemTopupCode(
   request: RedemptionRequest
 ): Promise<RedemptionResponse> {
-  const res = await api.post('/api/user/topup', request, {
-    skipBusinessError: true,
-  })
+  const res = await api.post('/api/user/topup', request)
   return res.data
 }
 

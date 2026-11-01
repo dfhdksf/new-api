@@ -28,9 +28,6 @@ import type {
 
 export const LOTTERY_ADMIN_QUERY_KEY = ['lottery-admin-activities'] as const
 
-// Writes pass skipBusinessError: callers turn success:false into one toast.
-const businessErrorsHandledByCaller = { skipBusinessError: true }
-
 export async function getAdminLotteryActivities(
   page: number,
   pageSize: number
@@ -48,11 +45,7 @@ export async function getAdminLotteryActivities(
 export async function createLotteryActivity(
   payload: LotteryActivityPayload
 ): Promise<ApiEnvelope<LotteryActivity>> {
-  const res = await api.post(
-    '/api/lottery/admin/activities',
-    payload,
-    businessErrorsHandledByCaller
-  )
+  const res = await api.post('/api/lottery/admin/activities', payload)
   return res.data
 }
 
@@ -60,11 +53,7 @@ export async function updateLotteryActivity(
   id: number,
   payload: LotteryActivityPayload
 ): Promise<ApiEnvelope<null>> {
-  const res = await api.put(
-    `/api/lottery/admin/activities/${id}`,
-    payload,
-    businessErrorsHandledByCaller
-  )
+  const res = await api.put(`/api/lottery/admin/activities/${id}`, payload)
   return res.data
 }
 
@@ -72,21 +61,16 @@ export async function setLotteryActivityEnabled(
   id: number,
   enabled: boolean
 ): Promise<ApiEnvelope<null>> {
-  const res = await api.patch(
-    `/api/lottery/admin/activities/${id}`,
-    { enabled },
-    businessErrorsHandledByCaller
-  )
+  const res = await api.patch(`/api/lottery/admin/activities/${id}`, {
+    enabled,
+  })
   return res.data
 }
 
 export async function deleteLotteryActivity(
   id: number
 ): Promise<ApiEnvelope<null>> {
-  const res = await api.delete(
-    `/api/lottery/admin/activities/${id}`,
-    businessErrorsHandledByCaller
-  )
+  const res = await api.delete(`/api/lottery/admin/activities/${id}`)
   return res.data
 }
 

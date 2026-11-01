@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { useAuthStore, type AuthBundle } from '@/stores/auth-store'
 
-import { bootstrapAuthentication } from './auth-session'
+import { resolveAuthentication } from './auth-session'
 
 const { sendRefresh } = vi.hoisted(() => ({ sendRefresh: vi.fn() }))
 
@@ -91,9 +91,9 @@ describe('authentication bootstrap during page reload', () => {
         throw failure
       })
 
-      // A rejected beforeLoad stops child guards from treating a temporary
-      // refresh failure as a confirmed anonymous session and redirecting.
-      await expect(bootstrapAuthentication()).rejects.toBe(failure)
+      // The protected-route guard rejects, so a temporary refresh failure is
+      // never treated as a confirmed anonymous session and redirected.
+      await expect(resolveAuthentication()).rejects.toBe(failure)
       expect(useAuthStore.getState().auth.bootstrapState).toBe('idle')
       expect(useAuthStore.getState().auth.user).toEqual(
         hasSession ? bundle.user : null
@@ -106,7 +106,7 @@ describe('authentication bootstrap during page reload', () => {
         headers: {},
         config,
       }))
-      await expect(bootstrapAuthentication()).resolves.toEqual({
+      await expect(resolveAuthentication()).resolves.toEqual({
         kind: 'authenticated',
         bundle,
       })

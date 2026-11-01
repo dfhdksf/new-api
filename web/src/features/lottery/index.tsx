@@ -24,7 +24,11 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/empty-state'
 import { SectionPageLayout } from '@/components/layout'
 import { Skeleton } from '@/components/ui/skeleton'
-import { queryErrorMessage, toastBusinessError } from '@/lib/mutation-errors'
+import { handleServerError } from '@/lib/handle-server-error'
+import {
+  createServerError,
+  getServerErrorMessage,
+} from '@/lib/server-error-message'
 
 import {
   LOTTERY_ACTIVITIES_QUERY_KEY,
@@ -49,10 +53,11 @@ export function Lottery() {
     queryFn: async () => {
       const response = await getLotteryActivities()
       if (!response.success) {
-        throw new Error(response.message || t('Failed to load lottery rounds'))
+        throw createServerError(response, t('Failed to load lottery rounds'))
       }
       return response.data ?? []
     },
+    meta: { errorToast: false },
   })
   const activities = activitiesQuery.data ?? EMPTY_ACTIVITIES
 
@@ -84,18 +89,20 @@ export function Lottery() {
     mutationFn: async (activity: UserLotteryActivity) => {
       const response = await drawLottery(activity.id)
       if (!response.success || !response.data) {
-        throw new Error(response.message || t('Draw failed, please try again'))
+        throw createServerError(response, t('Draw failed, please try again'))
       }
       return response.data
     },
     onSuccess: (data) => {
       setResult(data)
       if (data.won) {
-        void queryClient.invalidateQueries({ queryKey: REWARD_CODES_QUERY_KEY })
+        void queryClient.invalidateQueries({
+          queryKey: REWARD_CODES_QUERY_KEY,
+        })
       }
     },
     onError: (error: Error) =>
-      toastBusinessError(error, t('Draw failed, please try again')),
+      handleServerError(error, t('Draw failed, please try again')),
     onSettled: () => {
       void queryClient.invalidateQueries({
         queryKey: LOTTERY_ACTIVITIES_QUERY_KEY,
@@ -117,7 +124,7 @@ export function Lottery() {
       <EmptyState
         icon={Gift}
         title={t('Failed to load lottery rounds')}
-        description={queryErrorMessage(
+        description={getServerErrorMessage(
           activitiesQuery.error,
           t('Please try again later.')
         )}

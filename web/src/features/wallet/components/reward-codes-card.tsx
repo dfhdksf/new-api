@@ -27,8 +27,11 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TitledCard } from '@/components/ui/titled-card'
 import { formatQuota, formatTimestampToDate } from '@/lib/format'
-import { queryErrorMessage } from '@/lib/mutation-errors'
 import { rewardCodeSourceLabel } from '@/lib/reward-code'
+import {
+  createServerError,
+  getServerErrorMessage,
+} from '@/lib/server-error-message'
 
 import { getUserRewardCodes } from '../api'
 import { REWARD_CODES_PAGE_SIZE, REWARD_CODES_QUERY_KEY } from '../constants'
@@ -51,11 +54,12 @@ export function RewardCodesCard(props: RewardCodesCardProps) {
     queryFn: async () => {
       const response = await getUserRewardCodes(page, REWARD_CODES_PAGE_SIZE)
       if (!response.success || !response.data) {
-        throw new Error(response.message || t('Failed to load codes'))
+        throw createServerError(response, t('Failed to load codes'))
       }
       return response.data
     },
     placeholderData: (previous) => previous,
+    meta: { errorToast: false },
   })
 
   const items = codesQuery.data?.items ?? []
@@ -101,7 +105,7 @@ export function RewardCodesCard(props: RewardCodesCardProps) {
       <EmptyState
         icon={Gift}
         title={t('Failed to load codes')}
-        description={queryErrorMessage(
+        description={getServerErrorMessage(
           codesQuery.error,
           t('Please try again later.')
         )}
