@@ -21,8 +21,10 @@ import {
   Bird,
   Box,
   CreditCard,
+  Dices,
   FileText,
   FlaskConical,
+  Gift,
   Key,
   LayoutDashboard,
   ListTodo,
@@ -115,6 +117,11 @@ export function useSidebarData(): SidebarData {
             icon: Wallet,
           },
           {
+            title: t('Lottery'),
+            url: '/lottery',
+            icon: Gift,
+          },
+          {
             title: t('Profile'),
             url: '/profile',
             icon: User,
@@ -150,6 +157,11 @@ export function useSidebarData(): SidebarData {
             title: t('Redemption Codes'),
             url: '/redemption-codes',
             icon: Ticket,
+          },
+          {
+            title: t('Lottery Activities'),
+            url: '/lottery-activities',
+            icon: Dices,
           },
           {
             title: t('Subscriptions'),

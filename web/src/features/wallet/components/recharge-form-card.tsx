@@ -34,9 +34,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { formatCurrencyFromUSD } from '@/lib/currency'
 import { formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
+import { TOPUP_GIFT_MIN_USD } from '../constants'
 import {
   formatCurrency,
   getDiscountLabel,
@@ -141,6 +143,11 @@ export function RechargeFormCard({
   const hasWaffoPaymentMethods =
     Array.isArray(waffoPayMethods) && waffoPayMethods.length > 0
   const minTopup = getMinTopupAmount(topupInfo)
+  const giftFloor = formatCurrencyFromUSD(TOPUP_GIFT_MIN_USD, {
+    digitsLarge: 2,
+    digitsSmall: 2,
+    abbreviate: false,
+  })
   const redemptionEnabled = topupInfo?.enable_redemption !== false
 
   if (loading) {
@@ -392,6 +399,33 @@ export function RechargeFormCard({
                       )}
                     </AlertDescription>
                   </Alert>
+                )}
+                {topupInfo?.topup_gift && (
+                  <div className='flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300'>
+                    <Gift
+                      className='mt-0.5 size-3.5 shrink-0'
+                      aria-hidden='true'
+                    />
+                    <span>
+                      {topupInfo.topup_gift.min_percent ===
+                      topupInfo.topup_gift.max_percent
+                        ? t(
+                            'Each paid online top-up earns a bonus redemption code worth {{percent}}% of the credited amount (at least {{floor}}).',
+                            {
+                              percent: topupInfo.topup_gift.min_percent,
+                              floor: giftFloor,
+                            }
+                          )
+                        : t(
+                            'Each paid online top-up earns a bonus redemption code worth {{min}}%–{{max}}% of the credited amount (at least {{floor}}).',
+                            {
+                              min: topupInfo.topup_gift.min_percent,
+                              max: topupInfo.topup_gift.max_percent,
+                              floor: giftFloor,
+                            }
+                          )}
+                    </span>
+                  </div>
                 )}
               </div>
 

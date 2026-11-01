@@ -443,6 +443,12 @@ const AUDIT_TEMPLATES: Record<string, string> = {
   'redemption.update': 'Updated a redemption code',
   'redemption.delete': 'Deleted a redemption code',
   'redemption.delete_invalid': 'Deleted invalid redemption codes',
+  // Lottery activities
+  'lottery.create': 'Created lottery round {{period}} ({{name}})',
+  'lottery.update': 'Updated lottery round {{period}} ({{name}})',
+  'lottery.enable': 'Enabled lottery activity (ID: {{id}})',
+  'lottery.disable': 'Disabled lottery activity (ID: {{id}})',
+  'lottery.delete': 'Deleted lottery activity (ID: {{id}})',
   // Prefill groups
   'prefill_group.create': 'Created a prefill group',
   'prefill_group.update': 'Updated a prefill group',

@@ -217,6 +217,29 @@ const (
 	MsgCheckinQuotaFailed  = "checkin.quota_failed"
 )
 
+// Lottery related messages
+const (
+	MsgLotteryNotFound           = "lottery.not_found"
+	MsgLotteryPaused             = "lottery.paused"
+	MsgLotteryNotStarted         = "lottery.not_started"
+	MsgLotteryEnded              = "lottery.ended"
+	MsgLotterySoldOut            = "lottery.sold_out"
+	MsgLotteryAlreadyDrawn       = "lottery.already_drawn"
+	MsgLotteryBusy               = "lottery.busy"
+	MsgLotteryDrawFailed         = "lottery.draw_failed"
+	MsgLotteryPeriodInvalid      = "lottery.period_invalid"
+	MsgLotteryPeriodExists       = "lottery.period_exists"
+	MsgLotteryNameInvalid        = "lottery.name_invalid"
+	MsgLotteryDescriptionTooLong = "lottery.description_too_long"
+	MsgLotteryTimeInvalid        = "lottery.time_invalid"
+	MsgLotteryEndTimePassed      = "lottery.end_time_passed"
+	MsgLotterySlotsInvalid       = "lottery.slots_invalid"
+	MsgLotteryTiersInvalid       = "lottery.tiers_invalid"
+	MsgLotteryPrizesExceedSlots  = "lottery.prizes_exceed_slots"
+	MsgLotteryStarted            = "lottery.started"
+	MsgLotteryHasDraws           = "lottery.has_draws"
+)
+
 // Passkey related messages
 const (
 	MsgPasskeyCreateFailed  = "passkey.create_failed"

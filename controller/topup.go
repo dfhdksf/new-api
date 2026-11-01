@@ -121,6 +121,12 @@ func GetTopUpInfo(c *gin.Context) {
 		"discount":                operation_setting.GetPaymentSetting().AmountDiscount,
 		"topup_link":              common.TopUpLink,
 	}
+	if minPercent, maxPercent, ok := operation_setting.TopUpGiftPercentRange(); ok && operation_setting.IsTopUpGiftEnabled() {
+		data["topup_gift"] = gin.H{
+			"min_percent": minPercent,
+			"max_percent": maxPercent,
+		}
+	}
 	common.ApiSuccess(c, data)
 }
 
@@ -524,6 +530,10 @@ func GetUserTopUps(c *gin.Context) {
 		topups, total, err = model.GetUserTopUps(userId, pageInfo)
 	}
 	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if err := model.AttachTopUpGifts(topups); err != nil {
 		common.ApiError(c, err)
 		return
 	}

@@ -16,6 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import type { RewardCode } from '@/lib/reward-code'
+
 // ============================================================================
 // Wallet Type Definitions
 // ============================================================================
@@ -156,6 +158,16 @@ export interface TopupInfo {
   payment_compliance_confirmed?: boolean
   /** Current compliance terms version */
   payment_compliance_terms_version?: string
+  /** Gift percent range of paid top-ups; present only while gift codes are enabled */
+  topup_gift?: TopupGiftRange
+}
+
+/**
+ * Range of the bonus code percent a paid top-up can earn
+ */
+export interface TopupGiftRange {
+  min_percent: number
+  max_percent: number
 }
 
 /**
@@ -271,6 +283,8 @@ export interface TopupRecord {
   complete_time?: number
   /** Payment status */
   status: TopupStatus
+  /** Gift code earned by this top-up (only on the user's own records) */
+  gift?: RewardCode
 }
 
 /**
@@ -279,6 +293,16 @@ export interface TopupRecord {
 export interface BillingHistoryResponse {
   items: TopupRecord[]
   total: number
+}
+
+/**
+ * One page of the current user's reward codes, newest first
+ */
+export interface RewardCodeListData {
+  page: number
+  page_size: number
+  total: number
+  items: RewardCode[]
 }
 
 /**

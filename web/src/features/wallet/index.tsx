@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -30,9 +31,14 @@ import { CreemConfirmDialog } from './components/dialogs/creem-confirm-dialog'
 import { PaymentConfirmDialog } from './components/dialogs/payment-confirm-dialog'
 import { TransferDialog } from './components/dialogs/transfer-dialog'
 import { RechargeFormCard } from './components/recharge-form-card'
+import { RewardCodesCard } from './components/reward-codes-card'
 import { SubscriptionPlansCard } from './components/subscription-plans-card'
 import { WalletStatsCard } from './components/wallet-stats-card'
-import { DEFAULT_DISCOUNT_RATE, PAYMENT_TYPES } from './constants'
+import {
+  DEFAULT_DISCOUNT_RATE,
+  PAYMENT_TYPES,
+  REWARD_CODES_QUERY_KEY,
+} from './constants'
 import {
   useTopupInfo,
   usePayment,
@@ -61,6 +67,7 @@ interface WalletProps {
 
 export function Wallet(props: WalletProps) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const [user, setUser] = useState<UserWalletData | null>(null)
   const [userLoading, setUserLoading] = useState(true)
   const [topupAmount, setTopupAmount] = useState(0)
@@ -219,7 +226,18 @@ export function Wallet(props: WalletProps) {
     if (success) {
       setRedemptionCode('')
       await fetchUser()
+      // The redeemed code may be one of the user's own reward codes.
+      await queryClient.invalidateQueries({ queryKey: REWARD_CODES_QUERY_KEY })
     }
+  }
+
+  // Redeem one of the user's own reward codes from the My Codes card
+  const handleRedeemRewardCode = async (code: string) => {
+    const success = await redeemCode(code)
+    if (success) {
+      await fetchUser()
+    }
+    return success
   }
 
   // Handle transfer
@@ -338,6 +356,11 @@ export function Wallet(props: WalletProps) {
                 onPurchaseSuccess={fetchUser}
               />
             </div>
+
+            <RewardCodesCard
+              onRedeem={handleRedeemRewardCode}
+              redemptionEnabled={topupInfo?.enable_redemption !== false}
+            />
 
             <AffiliateRewardsCard
               user={user}

@@ -25,6 +25,7 @@ import { PaymentSettingsSection } from '../integrations/payment-settings-section
 import { RatioSettingsCard } from '../models/ratio-settings-card'
 import type { BillingSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
+import { TopUpGiftSettingsSection } from './topup-gift-settings-section'
 
 const getModelDefaults = (settings: BillingSettings) => ({
   ModelPrice: settings.ModelPrice,
@@ -197,6 +198,18 @@ const BILLING_SECTIONS = [
           enabled: settings['checkin_setting.enabled'],
           minQuota: settings['checkin_setting.min_quota'],
           maxQuota: settings['checkin_setting.max_quota'],
+        }}
+      />
+    ),
+  },
+  {
+    id: 'topup-gift',
+    titleKey: 'Top-up Gift Codes',
+    build: (settings: BillingSettings) => (
+      <TopUpGiftSettingsSection
+        defaultValues={{
+          enabled: settings['topup_gift_setting.enabled'],
+          weights: settings['topup_gift_setting.weights'],
         }}
       />
     ),

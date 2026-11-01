@@ -333,6 +333,9 @@ export type BillingSettings = {
   'checkin_setting.enabled': boolean
   'checkin_setting.min_quota': number
   'checkin_setting.max_quota': number
+  'topup_gift_setting.enabled': boolean
+  // JSON array of { percent, weight }; empty means the server default table.
+  'topup_gift_setting.weights': string
 }
 
 export type OperationsSettings = {

@@ -47,6 +47,12 @@ var auditContentTemplates = map[string]string{
 
 	"redemption.create": "Created ${count} redemption codes named ${name} (${quota} each)",
 
+	"lottery.create":  "Created lottery round ${period} (${name})",
+	"lottery.update":  "Updated lottery round ${period} (${name})",
+	"lottery.enable":  "Enabled lottery activity (ID: ${id})",
+	"lottery.disable": "Disabled lottery activity (ID: ${id})",
+	"lottery.delete":  "Deleted lottery activity (ID: ${id})",
+
 	"subscription.plan_reset":      "Reset active subscriptions for plan ${plan_id}",
 	"subscription.user_plan_reset": "Reset active plan ${plan_id} subscriptions for user ${target_user_id}",
 }

@@ -39,6 +39,7 @@ import type {
   WaffoPaymentResponse,
   WaffoPancakePaymentRequest,
   WaffoPancakePaymentResponse,
+  RewardCodeListData,
 } from './types'
 
 // ============================================================================
@@ -61,12 +62,30 @@ export async function getTopupInfo(): Promise<TopupInfoResponse> {
 }
 
 /**
- * Redeem a topup code
+ * Redeem a topup code. Business failures are toasted by useRedemption, so
+ * the interceptor's generic toast is skipped to avoid showing it twice.
  */
 export async function redeemTopupCode(
   request: RedemptionRequest
 ): Promise<RedemptionResponse> {
-  const res = await api.post('/api/user/topup', request)
+  const res = await api.post('/api/user/topup', request, {
+    skipBusinessError: true,
+  })
+  return res.data
+}
+
+/**
+ * Get the current user's reward codes (top-up gifts and lottery prizes)
+ */
+export async function getUserRewardCodes(
+  page: number,
+  pageSize: number
+): Promise<ApiResponse<RewardCodeListData>> {
+  const params = new URLSearchParams({
+    p: page.toString(),
+    page_size: pageSize.toString(),
+  })
+  const res = await api.get(`/api/user/reward_codes?${params.toString()}`)
   return res.data
 }
 

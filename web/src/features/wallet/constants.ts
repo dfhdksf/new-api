@@ -64,3 +64,19 @@ export const DEFAULT_DISCOUNT_RATE = 1.0
  * Default minimum topup amount
  */
 export const DEFAULT_MIN_TOPUP = 1
+
+/**
+ * Query key prefix of the user's reward code list; invalidate it whenever a
+ * redemption may have changed code statuses
+ */
+export const REWARD_CODES_QUERY_KEY = ['reward-codes'] as const
+
+/**
+ * Reward codes shown per page in the My Codes card
+ */
+export const REWARD_CODES_PAGE_SIZE = 6
+
+/**
+ * Minimum face value (USD) of a top-up gift code, mirrors the backend floor
+ */
+export const TOPUP_GIFT_MIN_USD = 0.1

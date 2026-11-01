@@ -130,6 +130,9 @@ func SetApiRouter(router *gin.Engine) {
 				selfRoute.GET("/checkin", controller.GetCheckinStatus)
 				selfRoute.POST("/checkin", middleware.TurnstileCheck(), controller.DoCheckin)
 
+				// Reward codes (top-up gifts and lottery prizes)
+				selfRoute.GET("/reward_codes", middleware.DisableCache(), controller.GetUserRewardCodes)
+
 				// Custom OAuth bindings
 				selfRoute.GET("/oauth/bindings", controller.GetUserOAuthBindings)
 				selfRoute.DELETE("/oauth/bindings/:provider_id", controller.UnbindCustomOAuth)
@@ -187,6 +190,24 @@ func SetApiRouter(router *gin.Engine) {
 			subscriptionAdminRoute.POST("/users/:id/subscriptions/reset", controller.AdminResetUserSubscriptionsByPlan)
 			subscriptionAdminRoute.POST("/user_subscriptions/:id/invalidate", controller.AdminInvalidateUserSubscription)
 			subscriptionAdminRoute.DELETE("/user_subscriptions/:id", controller.AdminDeleteUserSubscription)
+		}
+
+		// Lottery (user draw and admin management)
+		lotteryRoute := apiRouter.Group("/lottery")
+		lotteryRoute.Use(middleware.UserAuth())
+		{
+			lotteryRoute.GET("/activities", middleware.DisableCache(), controller.GetUserLotteryActivities)
+			lotteryRoute.POST("/activities/:id/draw", middleware.UserCriticalRateLimit("lottery-draw"), middleware.DisableCache(), controller.DrawLottery)
+		}
+		lotteryAdminRoute := apiRouter.Group("/lottery/admin")
+		lotteryAdminRoute.Use(middleware.AdminAuth())
+		{
+			lotteryAdminRoute.GET("/activities", controller.AdminListLotteryActivities)
+			lotteryAdminRoute.POST("/activities", controller.AdminCreateLotteryActivity)
+			lotteryAdminRoute.PUT("/activities/:id", controller.AdminUpdateLotteryActivity)
+			lotteryAdminRoute.PATCH("/activities/:id", controller.AdminUpdateLotteryActivityStatus)
+			lotteryAdminRoute.DELETE("/activities/:id", controller.AdminDeleteLotteryActivity)
+			lotteryAdminRoute.GET("/activities/:id/draws", controller.AdminListLotteryDraws)
 		}
 
 		// Subscription payment callbacks (no auth)

@@ -261,6 +261,19 @@ func GetRandomInt(max int) int {
 	return rand.Intn(max)
 }
 
+// GetSecureRandomInt returns a uniformly distributed integer in [0, max) read
+// from crypto/rand. Use it wherever the outcome is worth money (gifts, prizes).
+func GetSecureRandomInt(max int) (int, error) {
+	if max <= 0 {
+		return 0, fmt.Errorf("secure random bound must be positive, got %d", max)
+	}
+	n, err := crand.Int(crand.Reader, big.NewInt(int64(max)))
+	if err != nil {
+		return 0, err
+	}
+	return int(n.Int64()), nil
+}
+
 func GetTimestamp() int64 {
 	return time.Now().Unix()
 }
