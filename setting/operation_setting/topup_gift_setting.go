@@ -1,7 +1,6 @@
 package operation_setting
 
 import (
-	"fmt"
 	"slices"
 	"sync/atomic"
 
@@ -84,21 +83,21 @@ func IsTopUpGiftEnabled() bool {
 func parseTopUpGiftWeights(value string) ([]TopUpGiftWeight, error) {
 	var weights []TopUpGiftWeight
 	if err := common.UnmarshalJsonStr(value, &weights); err != nil {
-		return nil, fmt.Errorf("充值赠码权重必须是 [{percent, weight}] 格式的 JSON 数组: %w", err)
+		return nil, common.NewMessage("Top-up gift weights must be a JSON array of {percent, weight}: {{error}}", map[string]any{"error": err.Error()})
 	}
 	if len(weights) == 0 || len(weights) > topUpGiftMaxRowCount {
-		return nil, fmt.Errorf("充值赠码权重表需要 1 到 %d 行", topUpGiftMaxRowCount)
+		return nil, common.NewMessage("The table needs between 1 and 100 rows")
 	}
 	seen := make(map[int]bool, len(weights))
 	for i, row := range weights {
 		if row.Percent < topUpGiftMinPercent || row.Percent > topUpGiftMaxPercent {
-			return nil, fmt.Errorf("第 %d 行的赠送比例 %d%% 超出范围 %d%%~%d%%", i+1, row.Percent, topUpGiftMinPercent, topUpGiftMaxPercent)
+			return nil, common.NewMessage("Row {{row}}: gift percent {{percent}}% must be between 1% and 100%", map[string]any{"row": i + 1, "percent": row.Percent})
 		}
 		if row.Weight < 1 || row.Weight > topUpGiftMaxWeight {
-			return nil, fmt.Errorf("第 %d 行的权重 %d 超出范围 1~%d", i+1, row.Weight, topUpGiftMaxWeight)
+			return nil, common.NewMessage("Row {{row}}: weight {{weight}} must be between 1 and 1000000", map[string]any{"row": i + 1, "weight": row.Weight})
 		}
 		if seen[row.Percent] {
-			return nil, fmt.Errorf("赠送比例 %d%% 重复", row.Percent)
+			return nil, common.NewMessage("Gift percent {{percent}}% appears more than once", map[string]any{"percent": row.Percent})
 		}
 		seen[row.Percent] = true
 	}
@@ -118,7 +117,7 @@ func ValidateTopUpGiftWeightsJSON(value string) error {
 func LoadTopUpGiftWeightsFromJSONString(value string) {
 	weights, err := parseTopUpGiftWeights(value)
 	if err != nil {
-		common.SysError("加载充值赠码权重失败，暂停发放赠码: " + err.Error())
+		common.SysError(common.LogText("failed to load top-up gift weights, gift codes are paused: %s", err.Error()))
 	}
 	topUpGiftSetting.Weights = weights
 	storeTopUpGiftWeights(weights)

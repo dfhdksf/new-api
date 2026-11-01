@@ -35,16 +35,11 @@ export async function getLotteryActivities(): Promise<
 
 /**
  * Draws once in a round. Business failures (sold out, already drawn, ...) are
- * returned as success:false and toasted by the caller, so the interceptor's
- * generic toast is skipped.
+ * returned as success:false and toasted by the caller.
  */
 export async function drawLottery(
   activityId: number
 ): Promise<ApiEnvelope<LotteryDrawResult>> {
-  const res = await api.post(
-    `/api/lottery/activities/${activityId}/draw`,
-    undefined,
-    { skipBusinessError: true }
-  )
+  const res = await api.post(`/api/lottery/activities/${activityId}/draw`)
   return res.data
 }

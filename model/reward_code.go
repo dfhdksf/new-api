@@ -104,7 +104,7 @@ func issueTopUpGiftTx(tx *gorm.DB, topUp *TopUp, creditedQuota int) (*RewardCode
 	}
 	giftQuota, err := topUpGiftQuota(creditedQuota, percent)
 	if err != nil {
-		common.SysError(fmt.Sprintf("skip top-up gift trade_no=%s credited_quota=%d percent=%d: %v", topUp.TradeNo, creditedQuota, percent, err))
+		common.SysError(common.LogText("skip top-up gift trade_no=%s credited_quota=%d percent=%d: %v", topUp.TradeNo, creditedQuota, percent, err))
 		return nil, nil
 	}
 	gift := &RewardCode{
@@ -125,7 +125,7 @@ func recordTopUpGiftLog(gift *RewardCode) {
 	if gift == nil {
 		return
 	}
-	RecordLog(gift.UserId, LogTypeSystem, fmt.Sprintf("充值赠送兑换码，额度 %s（入账额度的 %d%%）", logger.LogQuota(gift.Quota), gift.Percent))
+	RecordLog(gift.UserId, LogTypeSystem, common.NewMessage("Top-up gift code worth {{quota}} ({{percent}}% of the credited amount)", map[string]any{"quota": logger.FormatQuota(gift.Quota), "percent": gift.Percent}))
 }
 
 // fillRewardCodeStatus 根据关联的兑换码推导状态。需要包含已被软删除的兑换码：

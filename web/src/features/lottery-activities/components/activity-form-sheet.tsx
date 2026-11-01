@@ -57,7 +57,8 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { getCurrencyLabel } from '@/lib/currency'
 import { formatQuota, getEditableQuotaStep } from '@/lib/format'
-import { toastBusinessError } from '@/lib/mutation-errors'
+import { handleServerError } from '@/lib/handle-server-error'
+import { createServerError } from '@/lib/server-error-message'
 
 import {
   LOTTERY_ADMIN_QUERY_KEY,
@@ -140,15 +141,17 @@ export function ActivityFormSheet(props: ActivityFormSheetProps) {
         ? await updateLotteryActivity(editing.id, payload)
         : await createLotteryActivity(payload)
       if (!response.success) {
-        throw new Error(response.message || t('Save failed'))
+        throw createServerError(response, t('Save failed'))
       }
     },
     onSuccess: async () => {
       toast.success(editing ? t('Activity updated') : t('Activity created'))
       props.onOpenChange(false)
-      await queryClient.invalidateQueries({ queryKey: LOTTERY_ADMIN_QUERY_KEY })
+      await queryClient.invalidateQueries({
+        queryKey: LOTTERY_ADMIN_QUERY_KEY,
+      })
     },
-    onError: (error: Error) => toastBusinessError(error, t('Save failed')),
+    onError: (error: Error) => handleServerError(error, t('Save failed')),
   })
 
   const currencyLabel = getCurrencyLabel()

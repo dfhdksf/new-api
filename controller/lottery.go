@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 
@@ -50,21 +49,21 @@ func (req *LotteryActivityRequest) toActivity(id int) *model.LotteryActivity {
 	return activity
 }
 
-// respondLotteryError 把抽奖业务错误翻译给用户，其余错误只记日志并返回通用提示。
-func respondLotteryError(c *gin.Context, err error, fallbackKey string) {
+// respondLotteryError 把抽奖业务错误交给前端翻译展示，其余错误只记日志并返回通用提示。
+func respondLotteryError(c *gin.Context, err error, fallback string) {
 	var lotteryErr model.LotteryError
 	if errors.As(err, &lotteryErr) {
-		common.ApiErrorI18n(c, string(lotteryErr))
+		common.ApiErrorT(c, string(lotteryErr))
 		return
 	}
-	common.SysError("lottery operation failed: " + err.Error())
-	common.ApiErrorI18n(c, fallbackKey)
+	common.SysError(common.LogText("lottery operation failed: %s", err.Error()))
+	common.ApiErrorT(c, fallback)
 }
 
 func lotteryIdParam(c *gin.Context) (int, bool) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil || id <= 0 {
-		common.ApiErrorI18n(c, i18n.MsgInvalidId)
+		common.ApiErrorT(c, "Invalid ID")
 		return 0, false
 	}
 	return id, true
@@ -95,7 +94,7 @@ func DrawLottery(c *gin.Context) {
 	}
 	result, err := model.DrawLottery(id, c.GetInt("id"))
 	if err != nil {
-		respondLotteryError(c, err, i18n.MsgLotteryDrawFailed)
+		respondLotteryError(c, err, "Draw failed, please try again later")
 		return
 	}
 	common.ApiSuccess(c, result)
@@ -133,12 +132,12 @@ func AdminCreateLotteryActivity(c *gin.Context) {
 	}
 	var req LotteryActivityRequest
 	if err := common.DecodeJson(c.Request.Body, &req); err != nil {
-		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		common.ApiErrorT(c, "Invalid parameters")
 		return
 	}
 	activity := req.toActivity(0)
 	if err := model.CreateLotteryActivity(activity); err != nil {
-		respondLotteryError(c, err, i18n.MsgCreateFailed)
+		respondLotteryError(c, err, "Creation failed")
 		return
 	}
 	recordManageAudit(c, "lottery.create", map[string]interface{}{
@@ -159,12 +158,12 @@ func AdminUpdateLotteryActivity(c *gin.Context) {
 	}
 	var req LotteryActivityRequest
 	if err := common.DecodeJson(c.Request.Body, &req); err != nil {
-		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		common.ApiErrorT(c, "Invalid parameters")
 		return
 	}
 	activity := req.toActivity(id)
 	if err := model.UpdateLotteryActivity(activity); err != nil {
-		respondLotteryError(c, err, i18n.MsgUpdateFailed)
+		respondLotteryError(c, err, "Update failed")
 		return
 	}
 	recordManageAudit(c, "lottery.update", map[string]interface{}{
@@ -185,11 +184,11 @@ func AdminUpdateLotteryActivityStatus(c *gin.Context) {
 	}
 	var req LotteryStatusRequest
 	if err := common.DecodeJson(c.Request.Body, &req); err != nil || req.Enabled == nil {
-		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		common.ApiErrorT(c, "Invalid parameters")
 		return
 	}
 	if err := model.SetLotteryActivityEnabled(id, *req.Enabled); err != nil {
-		respondLotteryError(c, err, i18n.MsgUpdateFailed)
+		respondLotteryError(c, err, "Update failed")
 		return
 	}
 	action := "lottery.disable"
@@ -206,7 +205,7 @@ func AdminDeleteLotteryActivity(c *gin.Context) {
 		return
 	}
 	if err := model.DeleteLotteryActivity(id); err != nil {
-		respondLotteryError(c, err, i18n.MsgDeleteFailed)
+		respondLotteryError(c, err, "Delete failed")
 		return
 	}
 	recordManageAudit(c, "lottery.delete", map[string]interface{}{"id": id})

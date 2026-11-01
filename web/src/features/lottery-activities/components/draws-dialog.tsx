@@ -28,7 +28,10 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { formatQuota, formatTimestampToDate } from '@/lib/format'
-import { queryErrorMessage } from '@/lib/mutation-errors'
+import {
+  createServerError,
+  getServerErrorMessage,
+} from '@/lib/server-error-message'
 
 import { getLotteryDraws } from '../api'
 import type { LotteryActivity } from '../types'
@@ -63,11 +66,12 @@ export function DrawsDialog(props: DrawsDialogProps) {
         wonOnly
       )
       if (!response.success || !response.data) {
-        throw new Error(response.message || t('Failed to load draws'))
+        throw createServerError(response, t('Failed to load draws'))
       }
       return response.data
     },
     enabled: activity !== null,
+    meta: { errorToast: false },
     // Keep rows while paging or filtering the same round (and while closing),
     // but never show another round's draws under this round's title.
     placeholderData: (previous, previousQuery) =>
@@ -93,7 +97,7 @@ export function DrawsDialog(props: DrawsDialogProps) {
   } else if (drawsQuery.isError) {
     content = (
       <p className='text-destructive py-6 text-center text-sm'>
-        {queryErrorMessage(drawsQuery.error, t('Failed to load draws'))}
+        {getServerErrorMessage(drawsQuery.error, t('Failed to load draws'))}
       </p>
     )
   } else if (items.length === 0) {

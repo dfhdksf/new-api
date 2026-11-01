@@ -199,7 +199,8 @@ func TestHardDeleteDetachesRewardCodesAndDraws(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, result.Won)
 
-	require.NoError(t, HardDeleteUserById(buyer.Id))
+	_, err = HardDeleteUserById(buyer.Id)
+	require.NoError(t, err)
 	successor := &User{Id: buyer.Id, Username: "reused_id_user", Status: common.UserStatusEnabled, AffCode: "reusedid"}
 	require.NoError(t, DB.Create(successor).Error)
 

@@ -29,30 +29,30 @@ const (
 	LotteryStateEnded    = "ended"
 )
 
-// LotteryError 是可以直接展示给用户的抽奖业务错误，文本即 i18n 消息键，由 controller 翻译。
+// LotteryError 是可以直接展示给用户的抽奖业务错误，文本是英文原文，即前端语言包的键（common.Message）。
 type LotteryError string
 
 func (e LotteryError) Error() string { return string(e) }
 
 const (
-	ErrLotteryNotFound           LotteryError = "lottery.not_found"
-	ErrLotteryPaused             LotteryError = "lottery.paused"
-	ErrLotteryNotStarted         LotteryError = "lottery.not_started"
-	ErrLotteryEnded              LotteryError = "lottery.ended"
-	ErrLotterySoldOut            LotteryError = "lottery.sold_out"
-	ErrLotteryAlreadyDrawn       LotteryError = "lottery.already_drawn"
-	ErrLotteryBusy               LotteryError = "lottery.busy"
-	ErrLotteryPeriodInvalid      LotteryError = "lottery.period_invalid"
-	ErrLotteryPeriodExists       LotteryError = "lottery.period_exists"
-	ErrLotteryNameInvalid        LotteryError = "lottery.name_invalid"
-	ErrLotteryDescriptionTooLong LotteryError = "lottery.description_too_long"
-	ErrLotteryTimeInvalid        LotteryError = "lottery.time_invalid"
-	ErrLotteryEndTimePassed      LotteryError = "lottery.end_time_passed"
-	ErrLotterySlotsInvalid       LotteryError = "lottery.slots_invalid"
-	ErrLotteryTiersInvalid       LotteryError = "lottery.tiers_invalid"
-	ErrLotteryPrizesExceedSlots  LotteryError = "lottery.prizes_exceed_slots"
-	ErrLotteryStarted            LotteryError = "lottery.started"
-	ErrLotteryHasDraws           LotteryError = "lottery.has_draws"
+	ErrLotteryNotFound           LotteryError = "Lottery activity not found"
+	ErrLotteryPaused             LotteryError = "This lottery is paused"
+	ErrLotteryNotStarted         LotteryError = "This lottery has not started yet"
+	ErrLotteryEnded              LotteryError = "This lottery has ended"
+	ErrLotterySoldOut            LotteryError = "All slots for this round are taken. See you next time!"
+	ErrLotteryAlreadyDrawn       LotteryError = "You have already drawn in this round"
+	ErrLotteryBusy               LotteryError = "Too many people are drawing right now, please try again"
+	ErrLotteryPeriodInvalid      LotteryError = "Round number must be a positive integer"
+	ErrLotteryPeriodExists       LotteryError = "A lottery with this round number already exists"
+	ErrLotteryNameInvalid        LotteryError = "Name must be 1 to 64 characters"
+	ErrLotteryDescriptionTooLong LotteryError = "Description cannot exceed 500 characters"
+	ErrLotteryTimeInvalid        LotteryError = "End time must be later than start time"
+	ErrLotteryEndTimePassed      LotteryError = "End time must be in the future"
+	ErrLotterySlotsInvalid       LotteryError = "Slots must be between 1 and 1000000"
+	ErrLotteryTiersInvalid       LotteryError = "Add 1 to 20 prize tiers, each with a positive amount and count"
+	ErrLotteryPrizesExceedSlots  LotteryError = "Total prizes cannot exceed the number of slots"
+	ErrLotteryStarted            LotteryError = "Round, start time, slots and prizes cannot be changed after the lottery starts"
+	ErrLotteryHasDraws           LotteryError = "Cannot delete a lottery that already has draws"
 )
 
 // errLotteryDrawConflict 表示抽奖期间活动计数被并发修改，整次抽奖回滚后重试。
@@ -654,7 +654,7 @@ func DrawLottery(activityId int, userId int) (*LotteryDrawResult, error) {
 		return nil, err
 	}
 	if reward != nil {
-		RecordLog(userId, LogTypeSystem, fmt.Sprintf("第%d期抽奖中奖，获得兑换码，额度 %s", result.Period, logger.LogQuota(reward.Quota)))
+		RecordLog(userId, LogTypeSystem, common.NewMessage("Won a redemption code worth {{quota}} in lottery round {{period}}", map[string]any{"quota": logger.FormatQuota(reward.Quota), "period": result.Period}))
 	}
 	return result, nil
 }

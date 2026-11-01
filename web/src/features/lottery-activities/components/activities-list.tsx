@@ -36,8 +36,12 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { formatQuota, formatTimestampToDate } from '@/lib/format'
-import { queryErrorMessage, toastBusinessError } from '@/lib/mutation-errors'
+import { handleServerError } from '@/lib/handle-server-error'
 import { getWinRatePercent } from '@/lib/reward-code'
+import {
+  createServerError,
+  getServerErrorMessage,
+} from '@/lib/server-error-message'
 
 import {
   LOTTERY_ADMIN_QUERY_KEY,
@@ -81,41 +85,46 @@ export function ActivitiesList(props: ActivitiesListProps) {
     queryFn: async () => {
       const response = await getAdminLotteryActivities(page, PAGE_SIZE)
       if (!response.success || !response.data) {
-        throw new Error(response.message || t('Failed to load activities'))
+        throw createServerError(response, t('Failed to load activities'))
       }
       return response.data
     },
     placeholderData: (previous) => previous,
+    meta: { errorToast: false },
   })
 
   const toggleMutation = useMutation({
     mutationFn: async (input: { id: number; enabled: boolean }) => {
       const response = await setLotteryActivityEnabled(input.id, input.enabled)
       if (!response.success) {
-        throw new Error(response.message || t('Update failed'))
+        throw createServerError(response, t('Update failed'))
       }
       return input.enabled
     },
     onSuccess: async (enabled) => {
       toast.success(enabled ? t('Activity enabled') : t('Activity disabled'))
-      await queryClient.invalidateQueries({ queryKey: LOTTERY_ADMIN_QUERY_KEY })
+      await queryClient.invalidateQueries({
+        queryKey: LOTTERY_ADMIN_QUERY_KEY,
+      })
     },
-    onError: (error: Error) => toastBusinessError(error, t('Update failed')),
+    onError: (error: Error) => handleServerError(error, t('Update failed')),
   })
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const response = await deleteLotteryActivity(id)
       if (!response.success) {
-        throw new Error(response.message || t('Delete failed'))
+        throw createServerError(response, t('Delete failed'))
       }
     },
     onSuccess: async () => {
       toast.success(t('Activity deleted'))
       setDeleteTarget(null)
-      await queryClient.invalidateQueries({ queryKey: LOTTERY_ADMIN_QUERY_KEY })
+      await queryClient.invalidateQueries({
+        queryKey: LOTTERY_ADMIN_QUERY_KEY,
+      })
     },
-    onError: (error: Error) => toastBusinessError(error, t('Delete failed')),
+    onError: (error: Error) => handleServerError(error, t('Delete failed')),
   })
 
   const items = activitiesQuery.data?.items ?? []
@@ -146,7 +155,7 @@ export function ActivitiesList(props: ActivitiesListProps) {
       <EmptyState
         icon={Dices}
         title={t('Failed to load activities')}
-        description={queryErrorMessage(
+        description={getServerErrorMessage(
           activitiesQuery.error,
           t('Please try again later.')
         )}
