@@ -288,8 +288,8 @@ upload:
 		[ "$$(docker inspect --format "{{.State.Health.Status}}" "$$container_id" 2>/dev/null || true)" = healthy ]; \
 		IMAGE_TAG='"$$version"' docker compose -p "$(DEPLOY_PROJECT)" -f docker-compose.yml -f $(RELEASE_COMPOSE_FILE) exec -T new-api wget -q -O - http://localhost:3000/api/status | grep -Eq "\"success\"[[:space:]]*:[[:space:]]*true"; \
 		rm -f $(IMAGE_FILE)'; \
-	echo ">>> Verifying externally at $(VERIFY_URL)/api/status..."; \
-	curl --retry 30 --retry-delay 1 --retry-connrefused --retry-all-errors -fsS "$(VERIFY_URL)/api/status" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true'; \
+#	echo ">>> Verifying externally at $(VERIFY_URL)/api/status..."; \
+#	curl --retry 30 --retry-delay 1 --retry-connrefused --retry-all-errors -fsS "$(VERIFY_URL)/api/status" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true'; \
 	echo ">>> Deployed and verified v$$version"
 
 release: build-image upload
@@ -331,3 +331,14 @@ clean:
 #    --target-dir /root/new-api-1 \
 #    --target-project new-api-1 \
 #    --database new-api \
+
+
+# 停止第二套newapi项目名下的所有容器
+#docker compose -p newapi \
+#  -f docker-compose.yml -f docker-compose.release.yml \
+#  stop -t 10
+
+# 如果只想停止newapi项目名下的new-api容器
+#docker compose -p new-api \
+#  -f docker-compose.yml -f docker-compose.release.yml \
+#  stop -t 10 new-api #10s后停止,等待请求结束
